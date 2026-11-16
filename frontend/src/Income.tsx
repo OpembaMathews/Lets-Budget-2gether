@@ -6,7 +6,7 @@ import type { Arrival, IncomeView, MonthSummary, Slice, SourceRow } from './api'
 import { monthLabel } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
-import { Button, Card, EditBox, Select } from './ui'
+import { Button, Card, EditBox, PhoneLabel, Select } from './ui'
 
 const box =
   'rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100'
@@ -78,11 +78,11 @@ export default function Income(props: { month: MonthSummary; onError: (m: string
       </Card>
 
       <Card className="overflow-x-auto">
-        <div className="min-w-[540px]">
+        <div className="md:min-w-[540px]">
           <div className="rounded-t-xl bg-brand-50 px-4 py-2.5">
             <h2 className="font-semibold text-brand-900">Expected this month</h2>
           </div>
-          <div className="grid grid-cols-[minmax(150px,1fr)_88px_112px_48px_100px] items-center gap-2 border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="hidden grid-cols-[minmax(150px,1fr)_88px_112px_48px_100px] items-center gap-2 border-b md:grid border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span>Source</span>
             <span>Kind</span>
             <span className="text-right">Expected</span>
@@ -261,8 +261,9 @@ function ExpectedRow(props: { source: SourceRow; monthId: number; locked: boolea
   const { source: s, monthId, locked, run } = props
   const regular = s.reliability === 'regular'
   return (
-    <div className="grid grid-cols-[minmax(150px,1fr)_88px_112px_48px_100px] items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-sm">
-      <div className="min-w-0">
+    <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)_minmax(0,1fr)] items-center gap-2 border-b border-slate-100 px-4 py-2 text-sm md:grid-cols-[minmax(150px,1fr)_88px_112px_48px_100px] md:py-1.5">
+      {/* On a phone: the name and kind on one row, the three figures under them. */}
+      <div className="col-span-2 min-w-0 md:col-span-1">
         <EditBox
           ariaLabel={`Name of ${s.name}`}
           value={s.name}
@@ -271,33 +272,42 @@ function ExpectedRow(props: { source: SourceRow; monthId: number; locked: boolea
         />
         <p className="truncate text-xs text-slate-500">{ruleText(s)}</p>
       </div>
-      <span>
+      <span className="justify-self-end md:justify-self-auto">
         <span className={'rounded-full px-2 py-0.5 text-xs font-semibold ' + (regular ? 'bg-brand-700 text-white' : 'bg-slate-100 text-slate-600')}>
           {regular ? 'Regular' : 'Irregular'}
         </span>
       </span>
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="min-w-0">
+        <PhoneLabel className="pl-2">Expected</PhoneLabel>
+        <div className="flex min-w-0 items-center gap-1">
+          <EditBox
+            ariaLabel={`Expected from ${s.name}`}
+            numeric
+            disabled={locked}
+            value={String(Number(s.expected ?? 0))}
+            onCommit={(v) => run(() => api.setExpected(monthId, { source_id: s.id, amount: v }))}
+            className="font-semibold text-brand-900"
+          />
+          <span className="text-xs text-slate-500">{s.currency_code}</span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <PhoneLabel className="pr-2 text-right">Day</PhoneLabel>
         <EditBox
-          ariaLabel={`Expected from ${s.name}`}
+          ariaLabel={`Expected day for ${s.name}`}
           numeric
           disabled={locked}
-          value={String(Number(s.expected ?? 0))}
-          onCommit={(v) => run(() => api.setExpected(monthId, { source_id: s.id, amount: v }))}
-          className="font-semibold text-brand-900"
+          value={s.expected_day ? String(s.expected_day) : ''}
+          placeholder="–"
+          onCommit={(v) =>
+            run(() => api.setExpected(monthId, { source_id: s.id, amount: String(Number(s.expected ?? 0)), expected_day: Math.round(Number(v)) }))
+          }
         />
-        <span className="text-xs text-slate-500">{s.currency_code}</span>
       </div>
-      <EditBox
-        ariaLabel={`Expected day for ${s.name}`}
-        numeric
-        disabled={locked}
-        value={s.expected_day ? String(s.expected_day) : ''}
-        placeholder="–"
-        onCommit={(v) =>
-          run(() => api.setExpected(monthId, { source_id: s.id, amount: String(Number(s.expected ?? 0)), expected_day: Math.round(Number(v)) }))
-        }
-      />
-      <span className="num text-right text-slate-600">{Number(s.arrived) > 0 ? money(s.arrived, s.currency_code) : '–'}</span>
+      <span className="num text-right text-slate-600">
+        <PhoneLabel>Arrived</PhoneLabel>
+        {Number(s.arrived) > 0 ? money(s.arrived, s.currency_code) : '–'}
+      </span>
     </div>
   )
 }
@@ -438,8 +448,8 @@ function SplitPanel(props: { arrival: Arrival; view: IncomeView; run: Run; onClo
               <p className="num text-sm font-semibold text-brand-800">{money(total, cur)}</p>
             </div>
             {rows.map((s) => (
-              <div key={s.id} className="grid grid-cols-[minmax(160px,1fr)_minmax(120px,auto)_130px] items-center gap-3 px-4 py-1 text-sm">
-                <div className="min-w-0">
+              <div key={s.id} className="grid grid-cols-[minmax(0,1fr)_130px] items-center gap-x-3 px-4 py-1.5 text-sm md:grid-cols-[minmax(160px,1fr)_minmax(120px,auto)_130px] md:py-1">
+                <div className="col-span-2 min-w-0 md:col-span-1">
                   <span className="font-medium">{s.line_name ?? 'Set aside for savings goals'}</span>
                   {s.group_name && (
                     <span className="text-slate-500">

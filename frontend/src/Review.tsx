@@ -174,7 +174,7 @@ function Balances(props: { review: ReviewView; run: Run; closed: boolean }) {
       </p>
       <div className="divide-y divide-slate-100">
         {b.accounts.map((a) => (
-          <div key={a.account_id} className="grid grid-cols-[minmax(140px,1fr)_60px_140px] items-center gap-2 py-1.5 text-sm">
+          <div key={a.account_id} className="grid grid-cols-[minmax(0,1fr)_40px_130px] items-center sm:grid-cols-[minmax(140px,1fr)_60px_140px] gap-2 py-1.5 text-sm">
             <span className="font-medium">{a.name}</span>
             <span className="text-xs text-slate-500">{a.currency_code}</span>
             <EditBox

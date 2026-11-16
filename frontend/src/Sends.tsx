@@ -5,7 +5,7 @@ import { api, fmt, money, monthLabel } from './api'
 import type { MonthSummary, SendBody, SendGroup, SendLine, SendRow, SendsView } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
-import { Button, Card } from './ui'
+import { Button, Card, PhoneLabel } from './ui'
 
 const box =
   'rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100'
@@ -538,7 +538,10 @@ function GroupCard(props: {
   const { group: g, view, picked, locked, onToggle, onAmount, onTickAll, defaultAmount, run } = props
   const usual = view.recipients.find((r) => r.id === g.usual_recipient_id)
   const open = g.lines.filter((l) => Number(l.remaining) > 0)
-  const grid = 'grid grid-cols-[28px_minmax(120px,1fr)_76px_76px_76px_100px] items-center gap-2'
+  const columns = 'md:grid-cols-[28px_minmax(120px,1fr)_76px_76px_76px_100px] items-center gap-2'
+  // On a phone the four amounts sit in a row of their own under the line's name.
+  const grid = 'grid grid-cols-[28px_repeat(4,minmax(0,1fr))] ' + columns
+  const cell = ' md:col-span-1 md:col-start-auto'
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-50 px-4 py-2.5">
@@ -567,7 +570,7 @@ function GroupCard(props: {
           <Bar part={Number(g.sent)} whole={Number(g.sent) + Number(g.remaining)} />
         </div>
       </div>
-      <div className={grid + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
+      <div className={'hidden md:grid ' + columns + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
         <span />
         <span>Line</span>
         <span className="text-right">Budget</span>
@@ -584,29 +587,29 @@ function GroupCard(props: {
             key={l.id}
             className={
               grid +
-              ' border-b border-slate-100 px-4 py-1.5 text-sm last:border-b-0 ' +
+              ' border-b border-slate-100 px-4 py-2 text-sm last:border-b-0 md:py-1.5 ' +
               (isPicked ? 'bg-leaf/10' : finished || locked ? '' : 'hover:bg-slate-50')
             }
           >
             <input
               type="checkbox"
               aria-label={`Pick ${l.name}`}
-              className="accent-brand-700"
+              className="h-5 w-5 accent-brand-700 md:h-auto md:w-auto"
               disabled={finished || locked}
               checked={isPicked}
               onChange={() => onToggle(l.id, defaultAmount(l))}
             />
-            <span className="min-w-0">
+            <span className={'col-span-4 min-w-0' + cell}>
               <span className={'font-medium ' + (finished ? 'text-slate-500' : '')}>{l.name}</span>
               {l.priority === 'essential' && <span className="ml-1.5 text-[11px] font-semibold text-brand-700">Essential</span>}
-              <span className="block text-[11px] text-slate-500">
+              <span className="block text-sm text-slate-500 md:text-[11px]">
                 to{' '}
                 <select
                   aria-label={`Who ${l.name} is sent to`}
                   title="Who this line's money is usually sent to"
                   disabled={locked}
                   className={
-                    'cursor-pointer rounded border-0 bg-transparent p-0 text-[11px] outline-none hover:underline focus:ring-1 focus:ring-brand-300 ' +
+                    'max-w-full cursor-pointer rounded border-0 bg-transparent p-0 text-[11px] outline-none hover:underline focus:ring-1 focus:ring-brand-300 ' +
                     (l.own_recipient ? 'font-semibold text-brand-700' : 'text-slate-500')
                   }
                   value={l.own_recipient ? String(l.recipient_id) : ''}
@@ -625,15 +628,23 @@ function GroupCard(props: {
                 </select>
               </span>
             </span>
-            <span className="num text-right text-slate-600">{fmt(l.planned)}</span>
+            <span className={'num col-start-2 text-right text-slate-600' + cell}>
+              <PhoneLabel>Budget</PhoneLabel>
+              {fmt(l.planned)}
+            </span>
             <span
               className={'num text-right ' + (l.actual !== null ? 'font-semibold text-amber-800' : 'text-slate-300')}
               title={l.actual !== null ? 'Typed on the Month plan' : 'No actual typed: the budget is used'}
             >
+              <PhoneLabel>Actual</PhoneLabel>
               {l.actual !== null ? fmt(l.actual) : '–'}
             </span>
-            <span className="num text-right text-slate-600">{Number(l.sent) > 0 ? fmt(l.sent) : '–'}</span>
+            <span className="num text-right text-slate-600">
+              <PhoneLabel>Sent</PhoneLabel>
+              {Number(l.sent) > 0 ? fmt(l.sent) : '–'}
+            </span>
             <span className="num text-right font-semibold">
+              <PhoneLabel>To send</PhoneLabel>
               {isPicked ? (
                 <input
                   aria-label={`Amount sent for ${l.name}`}

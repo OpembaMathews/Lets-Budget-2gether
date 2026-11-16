@@ -71,11 +71,11 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
         </p>
         <div className="divide-y divide-slate-100">
           {meta.accounts.map((account) => (
-            <div key={account.id} className="grid grid-cols-[minmax(160px,1fr)_90px_150px_90px_40px] items-center gap-2 py-1.5 text-sm">
+            <div key={account.id} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 py-2 text-sm md:grid-cols-[minmax(160px,1fr)_90px_150px_90px_40px] md:py-1.5">
               <EditBox
                 ariaLabel="Account name"
                 value={account.name}
-                className="font-medium"
+                className="order-1 col-span-2 font-medium md:order-none md:col-span-1"
                 onCommit={(v) => run(() => api.updateAccount(account.id, { name: v }))}
               />
               <Select
@@ -83,14 +83,16 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
                 value={account.currency_code}
                 options={currencyOptions}
                 onChange={(v) => run(() => api.updateAccount(account.id, { currency_code: v }))}
+                className="order-3 md:order-none"
               />
               <Select
                 ariaLabel="Account kind"
                 value={account.kind}
                 options={ACCOUNT_KINDS}
                 onChange={(v) => run(() => api.updateAccount(account.id, { kind: v }))}
+                className="order-4 md:order-none"
               />
-              <label className="flex items-center gap-1.5 text-slate-600">
+              <label className="order-5 flex items-center gap-1.5 whitespace-nowrap text-slate-600 md:order-none">
                 <input
                   type="checkbox"
                   className="accent-brand-700"
@@ -102,7 +104,7 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
               <button
                 type="button"
                 title="Remove this account"
-                className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
+                className="order-2 justify-self-end rounded-md px-2.5 py-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700 md:order-none md:px-1.5 md:py-1"
                 onClick={() => {
                   if (window.confirm(`Remove the account "${account.name}"?`)) void run(() => api.deleteAccount(account.id))
                 }}

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money } from './api'
 import type { HistoryRow } from './api'
-import { Card, Select } from './ui'
+import { Card, PhoneLabel, Select } from './ui'
 
 export default function History(props: { onOpenMonth: (id: number) => void }) {
   const query = useQuery({ queryKey: ['history'], queryFn: api.history })
@@ -28,8 +28,8 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
       <Chart months={months} />
 
       <Card className="overflow-x-auto">
-        <div className="min-w-[640px]">
-          <div className="grid grid-cols-[minmax(120px,1fr)_80px_repeat(5,96px)] gap-2 border-b border-slate-200 bg-brand-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="md:min-w-[640px]">
+          <div className="hidden grid-cols-[minmax(120px,1fr)_80px_repeat(5,96px)] gap-2 border-b md:grid border-slate-200 bg-brand-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span>Month</span>
             <span>Status</span>
             <span className="text-right">Income</span>
@@ -44,15 +44,31 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
               type="button"
               onClick={() => props.onOpenMonth(m.id)}
               title="Open this month"
-              className="grid w-full grid-cols-[minmax(120px,1fr)_80px_repeat(5,96px)] gap-2 border-b border-slate-100 px-4 py-2 text-left text-sm last:border-b-0 hover:bg-slate-50"
+              className="grid w-full grid-cols-5 gap-2 border-b border-slate-100 px-4 py-2.5 text-left text-sm last:border-b-0 hover:bg-slate-50 md:grid-cols-[minmax(120px,1fr)_80px_repeat(5,96px)] md:py-2"
             >
-              <span className="font-medium text-brand-900">{m.label}</span>
-              <span className="text-xs capitalize text-slate-500">{m.status}</span>
-              <span className="num text-right">{fmt(m.income_kes)}</span>
-              <span className="num text-right text-slate-600">{fmt(m.budget_kes)}</span>
-              <span className={'num text-right ' + (Number(m.actual_kes) > Number(m.budget_kes) ? 'font-semibold text-red-700' : '')}>{fmt(m.actual_kes)}</span>
-              <span className="num text-right text-leaf-dark">{fmt(m.saved_kes)}</span>
-              <span className="num text-right">{fmt(m.sent_kes)}</span>
+              {/* On a phone: the month and its status on one row, the five figures under them. */}
+              <span className="col-span-4 font-medium text-brand-900 md:col-span-1">{m.label}</span>
+              <span className="text-right text-xs capitalize text-slate-500 md:text-left">{m.status}</span>
+              <span className="num text-right">
+                <PhoneLabel>Income</PhoneLabel>
+                {fmt(m.income_kes)}
+              </span>
+              <span className="num text-right text-slate-600">
+                <PhoneLabel>Budget</PhoneLabel>
+                {fmt(m.budget_kes)}
+              </span>
+              <span className={'num text-right ' + (Number(m.actual_kes) > Number(m.budget_kes) ? 'font-semibold text-red-700' : '')}>
+                <PhoneLabel>Actual</PhoneLabel>
+                {fmt(m.actual_kes)}
+              </span>
+              <span className="num text-right text-leaf-dark">
+                <PhoneLabel>Saved</PhoneLabel>
+                {fmt(m.saved_kes)}
+              </span>
+              <span className="num text-right">
+                <PhoneLabel>Sent</PhoneLabel>
+                {fmt(m.sent_kes)}
+              </span>
             </button>
           ))}
         </div>

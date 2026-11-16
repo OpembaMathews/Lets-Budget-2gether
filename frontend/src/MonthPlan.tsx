@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money, monthLabel, otherCurrency } from './api'
 import type { Group, Line, LineActual, LineKind, LineType, Location, Meta, MonthDetail, Priority, Total } from './api'
-import { Button, Card, EditBox, Select } from './ui'
+import { Button, Card, EditBox, PhoneLabel, Select } from './ui'
 
 const TYPE_OPTIONS = [
   { value: 'fixed', label: 'Fixed' },
@@ -15,7 +15,11 @@ const KIND_OPTIONS = [
   { value: 'saving', label: 'Saving' },
   { value: 'debt_repayment', label: 'Debt repayment' },
 ]
-const ROW_GRID = 'grid grid-cols-[minmax(150px,1fr)_96px_84px_100px_100px_92px_44px] items-center gap-2'
+const COLUMNS = 'md:grid-cols-[minmax(150px,1fr)_96px_84px_100px_100px_92px_44px] items-center gap-x-2 gap-y-1 md:gap-2'
+const HEAD_GRID = 'hidden md:grid ' + COLUMNS
+// On a phone a line is three short rows: name and buttons, type and priority, then the three amounts.
+const ROW_GRID = 'grid grid-cols-6 ' + COLUMNS
+const CELL = ' md:order-none md:col-span-1'
 
 const EMPTY: Total = { native: {}, KES: '0', NTD: '0' }
 
@@ -236,14 +240,14 @@ function GroupCard(props: {
 
   return (
     <Card className="overflow-x-auto">
-      <div className="min-w-[720px]">
-        <div className="flex items-center justify-between rounded-t-xl bg-brand-50 px-4 py-2.5">
+      <div className="md:min-w-[720px]">
+        <div className="flex items-center justify-between gap-2 rounded-t-xl bg-brand-50 px-4 py-2.5">
           <h3 className="font-semibold text-brand-900">{group.name}</h3>
           <p className={'num text-sm font-semibold ' + (actual > budget ? 'text-red-700' : 'text-brand-800')}>
             {fmt(actual)} <span className="font-normal text-slate-500">of</span> {money(budget, cur)}
           </p>
         </div>
-        <div className={ROW_GRID + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
+        <div className={HEAD_GRID + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
           <span className="pl-2">Line</span>
           <span>Type</span>
           <span>Priority</span>
@@ -308,11 +312,11 @@ function LineRow(props: {
     <div
       className={
         ROW_GRID +
-        ' border-b border-slate-100 px-4 py-1 text-sm last:border-b-0 ' +
+        ' border-b border-slate-100 px-4 py-2 text-sm last:border-b-0 md:py-1 ' +
         (line.needs_review ? 'border-l-4 border-l-amber-400 bg-amber-50/60 pl-3' : '')
       }
     >
-      <div className="min-w-0">
+      <div className={'order-1 col-span-5 min-w-0' + CELL}>
         <div className="flex items-center gap-1">
           <EditBox
             ariaLabel="Line name"
@@ -351,6 +355,7 @@ function LineRow(props: {
         disabled={locked}
         options={TYPE_OPTIONS}
         onChange={(v) => update({ line_type: v as LineType })}
+        className={'order-3 col-span-3 ml-2 justify-self-start md:ml-0 md:justify-self-stretch' + CELL}
       />
 
       <button
@@ -359,14 +364,16 @@ function LineRow(props: {
         onClick={() => update({ priority: (essential ? 'flexible' : 'essential') as Priority })}
         title="Click to switch between essential and flexible"
         className={
-          'rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed ' +
-          (essential ? 'bg-brand-700 text-white hover:bg-brand-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')
+          'order-4 col-span-3 justify-self-end rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed md:justify-self-stretch md:px-2.5 md:py-1 ' +
+          (essential ? 'bg-brand-700 text-white hover:bg-brand-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200') +
+          CELL
         }
       >
         {essential ? 'Essential' : 'Flexible'}
       </button>
 
-      <div title={`≈ ${money(converted, otherCurrency(line.currency_code))}`}>
+      <div className={'order-5 col-span-2 min-w-0' + CELL} title={`≈ ${money(converted, otherCurrency(line.currency_code))}`}>
+        <PhoneLabel className="pr-2 text-right">Budget</PhoneLabel>
         <EditBox
           ariaLabel="Budget"
           numeric
@@ -377,17 +384,23 @@ function LineRow(props: {
         />
       </div>
 
-      <ActualBox line={line} actual={actual} locked={locked} update={update} />
+      <div className={'order-6 col-span-2 min-w-0' + CELL}>
+        <PhoneLabel className="pr-2 text-right">Actual</PhoneLabel>
+        <ActualBox line={line} actual={actual} locked={locked} update={update} />
+      </div>
 
-      <LeftCell actual={actual} />
+      <div className={'order-7 col-span-2 min-w-0' + CELL}>
+        <PhoneLabel className="pr-2 text-right">Left</PhoneLabel>
+        <LeftCell actual={actual} />
+      </div>
 
-      <div className="flex items-center justify-end gap-1">
+      <div className={'order-2 col-span-1 flex items-center justify-end gap-1' + CELL}>
         {line.needs_review && !locked && (
           <button
             type="button"
             title="Confirm this amount"
             onClick={() => update({ needs_review: false })}
-            className="rounded-md px-1.5 py-1 text-brand-700 hover:bg-brand-100"
+            className="rounded-md px-2.5 py-1.5 text-brand-700 hover:bg-brand-100 md:px-1.5 md:py-1"
           >
             ✓
           </button>
@@ -397,7 +410,7 @@ function LineRow(props: {
             type="button"
             title="Remove this line"
             onClick={remove}
-            className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
+            className="rounded-md px-2.5 py-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700 md:px-1.5 md:py-1"
           >
             ✕
           </button>
@@ -452,9 +465,10 @@ function LeftCell(props: { actual: LineActual | undefined }) {
   const a = props.actual
   if (!a) return <span />
   const left = Number(a.left)
-  if (a.over) return <span className="num pr-2 text-right font-semibold text-red-700">Over {fmt(-left)}</span>
-  if (left === 0) return <span className="num pr-2 text-right font-semibold text-brand-600">Done ✓</span>
-  return <span className="num pr-2 text-right text-slate-600">{fmt(left)}</span>
+  const cell = 'num block py-1 pr-2 text-right md:py-0 '
+  if (a.over) return <span className={cell + 'font-semibold text-red-700'}>Over {fmt(-left)}</span>
+  if (left === 0) return <span className={cell + 'font-semibold text-brand-600'}>Done ✓</span>
+  return <span className={cell + 'text-slate-600'}>{fmt(left)}</span>
 }
 
 function AddLine(props: { group: Group; currency: string; monthId: number; run: Run }) {

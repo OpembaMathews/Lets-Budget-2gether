@@ -34,6 +34,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* A phone zooms the whole page in when you tap a box whose text is smaller than 16px. */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Numbers line up in columns */
 .num {
   font-variant-numeric: tabular-nums;

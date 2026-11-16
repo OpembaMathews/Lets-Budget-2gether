@@ -61,6 +61,15 @@ export function EditBox(props: {
   )
 }
 
+/** A column heading shown above its value on phones, where a table's heading row is hidden. */
+export function PhoneLabel(props: { children: ReactNode; className?: string }) {
+  return (
+    <span className={'block text-[10px] font-semibold uppercase tracking-wide text-slate-400 md:hidden ' + (props.className ?? '')}>
+      {props.children}
+    </span>
+  )
+}
+
 export function Card(props: { children: ReactNode; className?: string }) {
   return (
     <div className={'rounded-xl border border-slate-200 bg-white shadow-sm ' + (props.className ?? '')}>

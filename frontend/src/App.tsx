@@ -16,6 +16,18 @@ import { Button, ErrorBanner, Select } from './ui'
 
 type Page = 'dashboard' | 'plan' | 'income' | 'sends' | 'goals' | 'debts' | 'review' | 'history' | 'settings'
 
+const PAGES: [Page, string][] = [
+  ['dashboard', 'Dashboard'],
+  ['plan', 'Month plan'],
+  ['income', 'Income'],
+  ['sends', 'Kenya sends'],
+  ['goals', 'Projects & goals'],
+  ['debts', 'Debts'],
+  ['review', 'Review'],
+  ['history', 'History'],
+  ['settings', 'Settings'],
+]
+
 
 export default function App() {
   const qc = useQueryClient()
@@ -60,6 +72,8 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
   const [chosenMonth, setChosenMonth] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  // On a phone the list of screens is folded away behind a Menu button.
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const meta = useQuery({ queryKey: ['meta'], queryFn: api.meta })
   const months = useQuery({ queryKey: ['months'], queryFn: api.months })
@@ -77,32 +91,44 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
 
   return (
     <div className="flex min-h-full flex-col lg:flex-row">
-      <aside className="flex shrink-0 flex-col bg-brand-900 text-white lg:min-h-screen lg:w-60">
-        <div className="border-b border-brand-800 px-5 py-5">
+      <aside className="sticky top-0 z-10 flex shrink-0 flex-col bg-brand-900 text-white lg:static lg:min-h-screen lg:w-60">
+        <div className="flex items-center justify-between gap-3 border-b border-brand-800 px-4 py-2.5 lg:px-5 lg:py-5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf text-lg font-black text-brand-950">
               2
             </span>
             <div>
               <p className="text-lg font-bold leading-tight">Budget 2gether</p>
-              <p className="text-xs text-brand-300">Plan · Save first · Review</p>
+              <p className="hidden text-xs text-brand-300 lg:block">Plan · Save first · Review</p>
             </div>
           </div>
+          <button
+            type="button"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex items-center gap-2 rounded-lg bg-brand-800 px-3 py-2 text-sm font-semibold lg:hidden"
+          >
+            {menuOpen ? 'Close' : PAGES.find(([key]) => key === page)?.[1]}
+            <span aria-hidden className="text-base leading-none">{menuOpen ? '✕' : '☰'}</span>
+          </button>
         </div>
-        <nav className="flex flex-row flex-wrap gap-1 p-3 lg:flex-col">
-          <NavItem label="Dashboard" active={page === 'dashboard'} onClick={() => setPage('dashboard')} />
-          <NavItem label="Month plan" active={page === 'plan'} onClick={() => setPage('plan')} />
-          <NavItem label="Income" active={page === 'income'} onClick={() => setPage('income')} />
-          <NavItem label="Kenya sends" active={page === 'sends'} onClick={() => setPage('sends')} />
-          <NavItem label="Projects & goals" active={page === 'goals'} onClick={() => setPage('goals')} />
-          <NavItem label="Debts" active={page === 'debts'} onClick={() => setPage('debts')} />
-          <NavItem label="Review" active={page === 'review'} onClick={() => setPage('review')} />
-          <NavItem label="History" active={page === 'history'} onClick={() => setPage('history')} />
-          <NavItem label="Settings" active={page === 'settings'} onClick={() => setPage('settings')} />
+        <nav className={(menuOpen ? 'flex' : 'hidden') + ' max-h-[calc(100dvh-58px)] flex-col gap-1 overflow-y-auto p-3 lg:flex lg:max-h-none'}>
+          {PAGES.map(([key, label]) => (
+            <NavItem
+              key={key}
+              label={label}
+              active={page === key}
+              onClick={() => {
+                setPage(key)
+                setMenuOpen(false)
+              }}
+            />
+          ))}
           <button
             type="button"
             onClick={() => void props.onSignOut()}
-            className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-brand-300 transition hover:bg-brand-800 hover:text-white"
+            className="rounded-lg px-3 py-3 text-left text-sm font-semibold text-brand-300 transition hover:bg-brand-800 hover:text-white lg:py-2"
           >
             Sign out <span className="font-normal">({props.user.username})</span>
           </button>
@@ -184,7 +210,7 @@ function NavItem(props: { label: string; active: boolean; onClick: () => void })
       type="button"
       onClick={props.onClick}
       className={
-        'rounded-lg px-3 py-2 text-left text-sm font-semibold transition ' +
+        'rounded-lg px-3 py-3 text-left text-sm font-semibold transition lg:py-2 ' +
         (props.active ? 'bg-brand-700 text-white' : 'text-brand-100 hover:bg-brand-800')
       }
     >
