@@ -417,7 +417,10 @@ class BalanceCheck(Base):
 
 
 class AuthSession(Base):
-    """A signed-in browser. Only a hash of its token is stored."""
+    """No longer used: sign-in sessions now live with the accounts (accounts.py).
+
+    Kept so the table layout still matches databases made before accounts existed.
+    """
 
     __tablename__ = "auth_session"
 

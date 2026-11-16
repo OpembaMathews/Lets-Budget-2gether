@@ -16,7 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .actuals import line_actuals
-from .db import DATA_DIR, engine, get_db
+from .auth import get_db
+from .db import data_dir
 from .income import load_month
 from .models import Account, BalanceCheck, LineGroup, Location, Month, Send
 from .sends import sends_view
@@ -238,14 +239,14 @@ def _log(month: Month, text: str) -> None:
     month.close_log = f"{month.close_log}\n{entry}" if month.close_log else entry
 
 
-def backup_database(tag: str) -> str | None:
-    """Copy the database file into data/backups. Returns the file name, or None for an in-memory database."""
-    path = engine.url.database
+def backup_database(db: Session, tag: str) -> str | None:
+    """Copy this person's database file into data/backups. Returns the file name, or None for an in-memory database."""
+    path = db.get_bind().url.database
     if not path or path == ":memory:" or not Path(path).exists():
         return None
-    folder = DATA_DIR / "backups"
+    folder = data_dir() / "backups"
     folder.mkdir(parents=True, exist_ok=True)
-    target = folder / f"budget-{tag}-{datetime.now():%Y%m%d-%H%M%S}.db"
+    target = folder / f"{Path(path).stem}-{tag}-{datetime.now():%Y%m%d-%H%M%S}.db"
     shutil.copy2(path, target)
     return target.name
 
@@ -255,7 +256,7 @@ def close_month(month_id: int, body: CloseIn, db: Session = Depends(get_db)):
     month = _month(db, month_id)
     if month.status == "closed":
         raise HTTPException(409, "This month is already closed")
-    saved_as = backup_database(f"{month.year}-{month.month:02d}-before-close")
+    saved_as = backup_database(db, f"{month.year}-{month.month:02d}-before-close")
     month.status = "closed"
     month.closed_at = datetime.now()
     if body.note and body.note.strip():

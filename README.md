@@ -13,7 +13,7 @@ Plan once a month, record each payment when it arrives, and the app shares it ou
 - **Debts:** loans and overdrafts with repayment lines that are paid as bills, and a clearing date.
 - **Month-end review:** what went over budget, cash not yet sent, a check of your real account balances, then close the month to lock it (a backup copy of the database is saved first).
 - **History:** every month side by side, yearly totals, a simple chart, and Excel downloads.
-- **Sign-in:** one password, stored only as a salted hash. Every data request needs a signed-in session.
+- **Accounts:** anyone can create an account with a username and password, and gets their own budget filled with sample figures to change. Nobody can see anyone else's budget. Passwords are stored only as salted hashes, and every data request needs a signed-in session. The first account is the owner, who can give someone a new password or remove an account.
 
 ## Built with
 
@@ -43,19 +43,22 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. The first time, the app asks you to create a password.
+Open http://localhost:5173. The first time, the app asks you to create an account. The first account is the owner.
 
-On first start the database (`backend/data/budget.db`) is created and filled with **made-up sample data** so you can see how things work. Rename or delete anything you like. A database that already holds data is never overwritten.
+Every new account gets its own database, filled with **made-up sample data** so you can see how things work. Rename or delete anything you like. A database that already holds data is never overwritten.
+
+If you used the app before accounts existed, your budget and password are kept: sign in with the username `admin` and the password you already use.
 
 ### Forgot the password?
 
-From the `backend` folder:
+The owner can give anyone a new password under Settings → People using this app. For the owner's own password, from the `backend` folder:
 
 ```bash
-.venv/Scripts/python -m app.reset_password
+.venv/Scripts/python -m app.reset_password              # the owner
+.venv/Scripts/python -m app.reset_password <username>   # anyone else
 ```
 
-This clears the password only; your budget data is untouched. Open the app and create a new one.
+This asks for a new password; the budget data is untouched.
 
 ## Tests
 
@@ -71,4 +74,4 @@ npx tsc -b
 
 ## Your data
 
-Everything stays in one SQLite file, `backend/data/budget.db`, which is never committed (see `.gitignore`). To move your budget to another machine or a server, copy that file there before starting the app.
+Everything stays in the `backend/data` folder, which is never committed (see `.gitignore`): `accounts.db` holds the accounts, and each account has one SQLite file with its budget (`budget.db` for the owner of an older installation, `user-….db` for everyone else). To move the app to another machine or a server, copy that folder there before starting it.

@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api } from './api'
-import type { Location, Meta, Recipient, Source, SplitOrder } from './api'
+import type { AppAccount, Location, Meta, Recipient, SignedInUser, Source, SplitOrder } from './api'
 import { Button, Card, EditBox, Select } from './ui'
 
 const ACCOUNT_KINDS = [
@@ -15,7 +15,7 @@ const ACCOUNT_KINDS = [
 const box =
   'rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100'
 
-export default function Settings(props: { meta: Meta; onError: (message: string | null) => void }) {
+export default function Settings(props: { meta: Meta; user: SignedInUser; onError: (message: string | null) => void }) {
   const { meta, onError } = props
   const qc = useQueryClient()
   const currencyOptions = meta.currencies.map((c) => ({ value: c.code, label: c.code }))
@@ -57,6 +57,8 @@ export default function Settings(props: { meta: Meta; onError: (message: string 
       <SplitOrderCard run={run} />
 
       <PasswordCard />
+
+      {props.user.is_admin && <PeopleCard me={props.user} />}
 
       <IncomeSources currencyOptions={currencyOptions} run={run} />
 
@@ -515,6 +517,90 @@ function SplitOrderCard(props: { run: Run }) {
           </label>
         ))}
       </div>
+    </Card>
+  )
+}
+
+/** The owner's list of everyone who can sign in. */
+function PeopleCard(props: { me: SignedInUser }) {
+  const qc = useQueryClient()
+  const people = useQuery({ queryKey: ['app-accounts'], queryFn: api.appAccounts })
+  const [resetting, setResetting] = useState<number | null>(null)
+  const [next, setNext] = useState('')
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function act(action: () => Promise<unknown>, done: string) {
+    try {
+      await action()
+      setMessage({ ok: true, text: done })
+    } catch (e) {
+      setMessage({ ok: false, text: (e as Error).message })
+    } finally {
+      await qc.invalidateQueries({ queryKey: ['app-accounts'] })
+    }
+  }
+
+  function remove(person: AppAccount) {
+    if (!window.confirm(`Remove ${person.username}? They will no longer be able to sign in or see their budget.`)) return
+    void act(() => api.removeAccount(person.id), `${person.username} was removed.`)
+  }
+
+  return (
+    <Card className="p-5">
+      <h2 className="text-lg font-bold text-brand-900">People using this app</h2>
+      <p className="mb-3 text-sm text-slate-600">
+        You are the owner. Everyone has their own budget and cannot see anyone else's, and neither can you. If someone
+        forgets their password, give them a new one here.
+      </p>
+      <ul className="divide-y divide-slate-100">
+        {(people.data ?? []).map((person) => (
+          <li key={person.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+            <span className="font-semibold text-slate-800">{person.username}</span>
+            {person.is_admin && <span className="rounded bg-brand-100 px-1.5 py-0.5 text-xs font-semibold text-brand-800">Owner</span>}
+            <span className="text-slate-500">joined {new Date(person.created_at).toLocaleDateString()}</span>
+            <span className="ml-auto flex flex-wrap items-center gap-2">
+              {resetting === person.id ? (
+                <form
+                  className="flex flex-wrap items-center gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (next.length < 6) return
+                    void act(() => api.setAccountPassword(person.id, next), `${person.username} has a new password and was signed out.`)
+                    setResetting(null)
+                    setNext('')
+                  }}
+                >
+                  <input aria-label={`New password for ${person.username}`} type="text" autoComplete="off" className={box + ' w-48'} placeholder="New (6+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
+                  <Button type="submit" disabled={next.length < 6}>
+                    Save
+                  </Button>
+                  <Button variant="ghost" onClick={() => setResetting(null)}>
+                    Cancel
+                  </Button>
+                </form>
+              ) : (
+                person.username !== props.me.username && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setResetting(person.id)
+                        setNext('')
+                      }}
+                    >
+                      New password
+                    </Button>
+                    <Button variant="danger" onClick={() => remove(person)}>
+                      Remove
+                    </Button>
+                  </>
+                )
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {message && <p className={'mt-2 text-sm ' + (message.ok ? 'text-brand-700' : 'text-red-700')}>{message.text}</p>}
     </Card>
   )
 }

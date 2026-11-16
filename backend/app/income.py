@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from .db import get_db
+from .auth import get_db
 from .models import (
     Allocation, AppSetting, BudgetLine, Currency, ExpectedIncome, IncomeArrival, IncomeSource, Month, SplitRule,
 )

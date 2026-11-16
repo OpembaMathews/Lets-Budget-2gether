@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .actuals import line_actuals
-from .db import get_db
+from .auth import get_db
 from .models import BudgetLine, Currency, Debt, DebtEntry, LineGroup, Location, Month
 from .services import convert
 from .split import jsonify

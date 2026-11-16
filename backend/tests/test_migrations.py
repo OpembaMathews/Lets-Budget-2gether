@@ -4,26 +4,16 @@ SQLite changes a table by rebuilding it, which fails if other tables point at it
 while foreign-key checks are on. An empty test database never shows this, so
 this test fills a database at the Phase 2 layout first, then upgrades it.
 """
-from alembic import command
-from alembic.config import Config
 from sqlalchemy import create_engine, text
 
-import app.db
-from app.db import BACKEND_DIR, enable_foreign_keys
+from app.db import enable_foreign_keys, migrate
 
 
-def _config() -> Config:
-    cfg = Config(str(BACKEND_DIR / "alembic.ini"))
-    cfg.set_main_option("script_location", str(BACKEND_DIR / "migrations"))
-    return cfg
-
-
-def test_upgrade_keeps_existing_data(tmp_path, monkeypatch):
+def test_upgrade_keeps_existing_data(tmp_path):
     engine = create_engine(f"sqlite:///{(tmp_path / 'old.db').as_posix()}")
     enable_foreign_keys(engine)  # the same setting the app uses
-    monkeypatch.setattr(app.db, "engine", engine)  # migrations/env.py reads it from here
 
-    command.upgrade(_config(), "194845c2779b")  # the Phase 2 layout
+    migrate(engine, "194845c2779b")  # the Phase 2 layout
     with engine.begin() as conn:
         conn.execute(text("INSERT INTO currency (code, name) VALUES ('KES', 'Kenyan Shilling')"))
         conn.execute(text("INSERT INTO location (id, name, default_currency, sort_order) VALUES (1, 'Kenya', 'KES', 1)"))
@@ -36,7 +26,7 @@ def test_upgrade_keeps_existing_data(tmp_path, monkeypatch):
             "planned, needs_review, is_core, sort_order) "
             "VALUES (1, 1, 1, 'School Fees', 'KES', 'fixed', 'expense', 'essential', 220000, 0, 0, 1)"))
 
-    command.upgrade(_config(), "head")
+    migrate(engine)
 
     with engine.connect() as conn:
         assert conn.execute(text("SELECT count(*) FROM budget_line")).scalar() == 1

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { api, MONTH_NAMES, monthLabel } from './api'
-import type { MonthSummary } from './api'
+import type { MonthSummary, SignedInUser } from './api'
 import Dashboard from './Dashboard'
 import Debts from './Debts'
 import Goals from './Goals'
@@ -36,7 +36,7 @@ export default function App() {
   if (auth.isLoading) return <p className="p-6 text-slate-500">Opening…</p>
   if (auth.isError || !auth.data)
     return <p className="p-6 text-red-700">The app cannot reach its backend. Start the Python server on port 8000, then reload.</p>
-  if (!auth.data.signed_in)
+  if (!auth.data.signed_in || !auth.data.user)
     return (
       <Login
         setUp={auth.data.set_up}
@@ -46,6 +46,7 @@ export default function App() {
     )
   return (
     <SignedInApp
+      user={auth.data.user}
       onSignOut={async () => {
         await api.authLogout()
         await refreshSession()
@@ -54,7 +55,7 @@ export default function App() {
   )
 }
 
-function SignedInApp(props: { onSignOut: () => Promise<void> }) {
+function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void> }) {
   const [page, setPage] = useState<Page>('dashboard')
   const [chosenMonth, setChosenMonth] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +104,7 @@ function SignedInApp(props: { onSignOut: () => Promise<void> }) {
             onClick={() => void props.onSignOut()}
             className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-brand-300 transition hover:bg-brand-800 hover:text-white"
           >
-            Sign out
+            Sign out <span className="font-normal">({props.user.username})</span>
           </button>
         </nav>
         <p className="mt-auto hidden px-5 py-4 text-xs text-brand-300/80 lg:block">Your data stays on this computer.</p>
@@ -158,7 +159,7 @@ function SignedInApp(props: { onSignOut: () => Promise<void> }) {
             </>
           )}
 
-          {!offline && page === 'settings' && meta.data && <Settings meta={meta.data} onError={setError} />}
+          {!offline && page === 'settings' && meta.data && <Settings meta={meta.data} user={props.user} onError={setError} />}
         </div>
       </main>
 

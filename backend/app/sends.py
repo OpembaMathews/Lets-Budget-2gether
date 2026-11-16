@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from .db import get_db
+from .auth import get_db
 from .models import BudgetLine, IncomeArrival, LineGroup, Location, Month, Recipient, Send, SendPurpose
 from .split import jsonify, line_coverage, line_target
 from .types import to_money

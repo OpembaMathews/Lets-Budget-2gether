@@ -2,9 +2,11 @@
 from alembic import context
 
 import app.models  # noqa: F401  (registers the tables)
-from app.db import Base, engine
+from app.db import LEGACY_DB, Base, data_dir, engine_for
 
 target_metadata = Base.metadata
+# app.db.migrate passes the database to work on. Run from the command line, it is the owner's.
+engine = context.config.attributes.get("engine") or engine_for(data_dir() / LEGACY_DB)
 
 
 def run_migrations_online() -> None:

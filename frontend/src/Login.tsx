@@ -1,39 +1,48 @@
-// Sign in, or create the password the first time.
+// Sign in to an account, or create a new one.
 import { useState } from 'react'
 import { api } from './api'
 
 export default function Login(props: { setUp: boolean; minLength: number; onSignedIn: () => void }) {
   const { setUp, minLength, onSignedIn } = props
+  // Until the first account exists there is nothing to sign in to.
+  const [creating, setCreating] = useState(!setUp)
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [repeat, setRepeat] = useState('')
+  const [show, setShow] = useState(false)
   const [remember, setRemember] = useState(true)
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const creating = !setUp
+  const name = username.trim()
+  const badName = creating && name.length > 0 && !/^[a-z0-9][a-z0-9._-]{2,29}$/i.test(name)
   const tooShort = creating && password.length > 0 && password.length < minLength
-  const mismatch = creating && repeat.length > 0 && repeat !== password
-  const valid = creating ? password.length >= minLength && repeat === password : password.length > 0
+  const valid = creating ? name.length > 0 && !badName && password.length >= minLength : name.length > 0 && password.length > 0
 
   async function submit() {
     if (!valid || busy) return
     setBusy(true)
     setProblem(null)
     try {
-      if (creating) await api.authSetup(password, remember)
-      else await api.authLogin(password, remember)
+      if (creating) await api.authSignup(name, password, remember)
+      else await api.authLogin(name, password, remember)
       onSignedIn()
     } catch (e) {
       setProblem((e as Error).message)
       setPassword('')
-      setRepeat('')
     } finally {
       setBusy(false)
     }
   }
 
+  function switchTo(create: boolean) {
+    setCreating(create)
+    setProblem(null)
+    setPassword('')
+  }
+
   const box =
     'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100'
+  const link = 'font-semibold text-brand-700 underline-offset-2 hover:underline'
   return (
     <div className="flex min-h-full items-center justify-center bg-brand-900 px-4 py-10">
       <form
@@ -51,45 +60,55 @@ export default function Login(props: { setUp: boolean; minLength: number; onSign
           </div>
         </div>
 
-        <h1 className="text-xl font-bold text-brand-900">{creating ? 'Create your password' : 'Sign in'}</h1>
+        <h1 className="text-xl font-bold text-brand-900">{creating ? 'Create your account' : 'Sign in'}</h1>
         <p className="mt-1 text-sm text-slate-600">
           {creating
-            ? `Choose a password of at least ${minLength} characters. You will use it to open the app.`
-            : 'Enter your password to open your budget.'}
+            ? 'You get your own budget, filled with sample figures you can change to yours.'
+            : 'Enter your username and password to open your budget.'}
         </p>
 
         <label className="mt-4 block text-sm">
-          <span className="mb-1 block font-semibold text-slate-700">Password</span>
+          <span className="mb-1 block font-semibold text-slate-700">Username</span>
+          <input
+            aria-label="Username"
+            type="text"
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="username"
+            className={box}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </label>
+        {badName && (
+          <p className="mt-1 text-xs text-amber-800">3 to 30 letters, numbers, dots, dashes or underscores. No spaces.</p>
+        )}
+
+        <label className="mt-3 block text-sm">
+          <span className="mb-1 flex items-baseline justify-between font-semibold text-slate-700">
+            Password
+            <button type="button" className={'text-xs ' + link} onClick={() => setShow(!show)}>
+              {show ? 'Hide' : 'Show'}
+            </button>
+          </span>
           <input
             aria-label="Password"
-            type="password"
-            autoFocus
+            type={show ? 'text' : 'password'}
             autoComplete={creating ? 'new-password' : 'current-password'}
             className={box}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
-        {tooShort && <p className="mt-1 text-xs text-amber-800">At least {minLength} characters.</p>}
-
         {creating && (
-          <label className="mt-3 block text-sm">
-            <span className="mb-1 block font-semibold text-slate-700">Type it again</span>
-            <input
-              aria-label="Repeat password"
-              type="password"
-              autoComplete="new-password"
-              className={box}
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value)}
-            />
-          </label>
+          <p className={'mt-1 text-xs ' + (tooShort ? 'text-amber-800' : 'text-slate-500')}>At least {minLength} characters.</p>
         )}
-        {mismatch && <p className="mt-1 text-xs text-amber-800">The two passwords are not the same.</p>}
 
         <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" className="accent-brand-700" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-          Keep me signed in on this computer for 30 days
+          Keep me signed in on this device for 30 days
         </label>
 
         {problem && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{problem}</p>}
@@ -99,13 +118,30 @@ export default function Login(props: { setUp: boolean; minLength: number; onSign
           disabled={!valid || busy}
           className="mt-5 w-full rounded-lg bg-brand-700 px-4 py-2.5 font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          {busy ? 'Please wait…' : creating ? 'Create password and open' : 'Sign in'}
+          {busy ? 'Please wait…' : creating ? 'Create account and open' : 'Sign in'}
         </button>
+
+        <p className="mt-4 text-sm text-slate-600">
+          {creating ? (
+            setUp && (
+              <>
+                Already have an account?{' '}
+                <button type="button" className={link} onClick={() => switchTo(false)}>
+                  Sign in
+                </button>
+              </>
+            )
+          ) : (
+            <>
+              New here?{' '}
+              <button type="button" className={link} onClick={() => switchTo(true)}>
+                Create an account
+              </button>
+            </>
+          )}
+        </p>
         {!creating && (
-          <p className="mt-4 text-xs text-slate-500">
-            Forgot it? On this computer, run <code className="rounded bg-slate-100 px-1">python -m app.reset_password</code> in
-            the backend folder, then create a new one. Your budget is not affected.
-          </p>
+          <p className="mt-2 text-xs text-slate-500">Forgot your password? Ask the owner of this app to give you a new one.</p>
         )}
       </form>
     </div>

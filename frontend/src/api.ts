@@ -489,6 +489,17 @@ export interface MonthDetail extends MonthSummary {
   actuals: Record<string, LineActual>
 }
 
+export interface SignedInUser {
+  username: string
+  is_admin: boolean
+}
+
+/** Someone who can sign in to the app (not a bank account). */
+export interface AppAccount extends SignedInUser {
+  id: number
+  created_at: string
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch('/api' + path, {
     method,
@@ -597,12 +608,20 @@ export const api = {
     request<DebtsView>('POST', `/debts/${id}/entries?month_id=${monthId}`, body),
   deleteDebtEntry: (monthId: number, id: number) => request<DebtsView>('DELETE', `/debt-entries/${id}?month_id=${monthId}`),
 
-  authStatus: () => request<{ set_up: boolean; signed_in: boolean; min_length: number }>('GET', '/auth/status'),
-  authSetup: (password: string, remember: boolean) => request<{ signed_in: boolean }>('POST', '/auth/setup', { password, remember }),
-  authLogin: (password: string, remember: boolean) => request<{ signed_in: boolean }>('POST', '/auth/login', { password, remember }),
+  authStatus: () =>
+    request<{ set_up: boolean; signed_in: boolean; min_length: number; user: SignedInUser | null }>('GET', '/auth/status'),
+  authSignup: (username: string, password: string, remember: boolean) =>
+    request<{ signed_in: boolean }>('POST', '/auth/signup', { username, password, remember }),
+  authLogin: (username: string, password: string, remember: boolean) =>
+    request<{ signed_in: boolean }>('POST', '/auth/login', { username, password, remember }),
   authLogout: () => request<{ signed_in: boolean }>('POST', '/auth/logout', {}),
   changePassword: (current: string, next: string) =>
     request<{ signed_in: boolean }>('POST', '/auth/change-password', { current, new: next }),
+
+  // the owner only
+  appAccounts: () => request<AppAccount[]>('GET', '/admin/accounts'),
+  setAccountPassword: (id: number, next: string) => request<{ ok: boolean }>('POST', `/admin/accounts/${id}/password`, { new: next }),
+  removeAccount: (id: number) => request<{ ok: boolean }>('DELETE', `/admin/accounts/${id}`),
 
   sources: () => request<Source[]>('GET', '/income-sources'),
   createSource: (body: Partial<Source> & { name: string; currency_code: string }) =>

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from . import schemas
 from .actuals import line_actuals
-from .db import get_db
+from .auth import get_db
 from .models import Account, BudgetLine, Currency, Debt, ExpectedIncome, Goal, LineGroup, Location, Month, Recipient
 from .services import (
     copy_forward,
