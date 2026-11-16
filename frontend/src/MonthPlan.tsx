@@ -23,6 +23,19 @@ const CELL = ' md:order-none md:col-span-1'
 
 const EMPTY: Total = { native: {}, KES: '0', NTD: '0' }
 
+/** The actuals of every line in a location added up, in that location's currency. */
+function locationActual(month: MonthDetail, location: Location): number {
+  const groupIds = new Set(location.groups.map((g) => g.id))
+  const rate = Number(month.fx_rate_ntd_kes)
+  return month.lines
+    .filter((l) => groupIds.has(l.group_id))
+    .reduce((sum, l) => {
+      const a = Number(month.actuals[l.id]?.actual ?? 0)
+      if (l.currency_code === location.default_currency) return sum + a
+      return sum + (l.currency_code === 'NTD' ? a * rate : a / rate)
+    }, 0)
+}
+
 /** Which sections are folded away. Remembered on this device only. */
 const COLLAPSED_KEY = 'plan-collapsed-sections'
 function readCollapsed(): Set<number> {
@@ -203,6 +216,9 @@ function Summary(props: { month: MonthDetail; meta: Meta }) {
               {money(total[loc.default_currency as 'KES' | 'NTD'], loc.default_currency)}
             </p>
             <p className="num text-sm text-slate-500">≈ {money(total[other as 'KES' | 'NTD'], other)}</p>
+            <p className="num mt-2 border-t border-slate-100 pt-2 text-sm text-slate-600">
+              Actual so far: <strong className="text-brand-900">{money(locationActual(month, loc), loc.default_currency)}</strong>
+            </p>
           </Card>
         )
       })}
@@ -237,11 +253,14 @@ function LocationBlock(props: {
   const { location, month, rate, locked, run, goalNames } = props
   const total = month.totals.locations[location.id] ?? EMPTY
   const cur = location.default_currency as 'KES' | 'NTD'
+  const actual = locationActual(month, location)
   return (
     <section>
       <div className="mb-3 flex items-baseline justify-between border-b-2 border-brand-700 pb-1">
         <h2 className="text-lg font-bold text-brand-900">{location.name}</h2>
-        <p className="num text-sm font-semibold text-brand-800">{money(total[cur], cur)}</p>
+        <p className={'num text-sm font-semibold ' + (actual > Number(total[cur]) ? 'text-red-700' : 'text-brand-800')}>
+          {fmt(actual)} <span className="font-normal text-slate-500">of</span> {money(total[cur], cur)}
+        </p>
       </div>
       <div className="space-y-4">
         {location.groups.map((group) => (
