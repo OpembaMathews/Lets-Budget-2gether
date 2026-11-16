@@ -23,12 +23,40 @@ const CELL = ' md:order-none md:col-span-1'
 
 const EMPTY: Total = { native: {}, KES: '0', NTD: '0' }
 
+/** Which sections are folded away. Remembered on this device only. */
+const COLLAPSED_KEY = 'plan-collapsed-sections'
+function readCollapsed(): Set<number> {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]')
+    return new Set(Array.isArray(saved) ? saved.filter((id): id is number => typeof id === 'number') : [])
+  } catch {
+    return new Set()
+  }
+}
+
 export default function MonthPlan(props: { monthId: number; meta: Meta; onError: (message: string | null) => void }) {
   const { monthId, meta, onError } = props
   const qc = useQueryClient()
   const query = useQuery({ queryKey: ['month', monthId], queryFn: () => api.month(monthId) })
   const goalsQuery = useQuery({ queryKey: ['goals', monthId], queryFn: () => api.goals(monthId) })
   const goalNames = new Map((goalsQuery.data?.goals ?? []).map((g) => [g.id, g.name]))
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+
+  function saveCollapsed(next: Set<number>) {
+    setCollapsed(next)
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]))
+    } catch {
+      // private browsing: the choice just lasts until the page is closed
+    }
+  }
+  function toggle(groupId: number) {
+    const next = new Set(collapsed)
+    if (!next.delete(groupId)) next.add(groupId)
+    saveCollapsed(next)
+  }
+  const groupIds = meta.locations.flatMap((l) => l.groups.map((g) => g.id))
+  const allCollapsed = groupIds.length > 0 && groupIds.every((id) => collapsed.has(id))
 
   async function run(action: () => Promise<unknown>) {
     try {
@@ -67,6 +95,18 @@ export default function MonthPlan(props: { monthId: number; meta: Meta; onError:
         </div>
       )}
 
+      {groupIds.length > 1 && (
+        <div className="-mb-3 flex justify-end">
+          <button
+            type="button"
+            className="rounded-md px-2 py-1.5 text-sm font-semibold text-brand-700 hover:bg-brand-50"
+            onClick={() => saveCollapsed(new Set(allCollapsed ? [] : groupIds))}
+          >
+            {allCollapsed ? 'Expand all sections' : 'Collapse all sections'}
+          </button>
+        </div>
+      )}
+
       {meta.locations.map((location) => (
         <LocationBlock
           key={location.id}
@@ -76,6 +116,8 @@ export default function MonthPlan(props: { monthId: number; meta: Meta; onError:
           locked={locked}
           run={run}
           goalNames={goalNames}
+          collapsed={collapsed}
+          onToggle={toggle}
         />
       ))}
 
@@ -189,6 +231,8 @@ function LocationBlock(props: {
   locked: boolean
   run: Run
   goalNames: Map<number, string>
+  collapsed: Set<number>
+  onToggle: (groupId: number) => void
 }) {
   const { location, month, rate, locked, run, goalNames } = props
   const total = month.totals.locations[location.id] ?? EMPTY
@@ -210,6 +254,8 @@ function LocationBlock(props: {
             locked={locked}
             run={run}
             goalNames={goalNames}
+            collapsed={props.collapsed.has(group.id)}
+            onToggle={() => props.onToggle(group.id)}
           />
         ))}
         {location.groups.length === 0 && (
@@ -228,9 +274,12 @@ function GroupCard(props: {
   locked: boolean
   run: Run
   goalNames: Map<number, string>
+  collapsed: boolean
+  onToggle: () => void
 }) {
-  const { group, location, month, rate, locked, run, goalNames } = props
+  const { group, location, month, rate, locked, run, goalNames, collapsed } = props
   const lines = month.lines.filter((l) => l.group_id === group.id)
+  const toConfirm = locked ? 0 : lines.filter((l) => l.needs_review).length
   const total = month.totals.groups[group.id] ?? EMPTY
   const cur = location.default_currency as 'KES' | 'NTD'
   const actual = lines
@@ -241,34 +290,62 @@ function GroupCard(props: {
   return (
     <Card className="overflow-x-auto">
       <div className="md:min-w-[720px]">
-        <div className="flex items-center justify-between gap-2 rounded-t-xl bg-brand-50 px-4 py-2.5">
-          <h3 className="font-semibold text-brand-900">{group.name}</h3>
-          <p className={'num text-sm font-semibold ' + (actual > budget ? 'text-red-700' : 'text-brand-800')}>
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Show the lines in this section' : 'Hide the lines in this section'}
+          onClick={props.onToggle}
+          className={
+            'flex w-full items-center justify-between gap-2 bg-brand-50 px-4 py-2.5 text-left hover:bg-brand-100 ' +
+            (collapsed ? 'rounded-xl' : 'rounded-t-xl')
+          }
+        >
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className={'text-xs text-brand-700 transition-transform ' + (collapsed ? '' : 'rotate-90')} aria-hidden>
+              ▶
+            </span>
+            <h3 className="font-semibold text-brand-900">{group.name}</h3>
+            {collapsed && (
+              <span className="text-xs text-slate-500">
+                {lines.length} line{lines.length === 1 ? '' : 's'}
+              </span>
+            )}
+            {collapsed && toConfirm > 0 && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                {toConfirm} to confirm
+              </span>
+            )}
+          </span>
+          <span className={'num shrink-0 text-sm font-semibold ' + (actual > budget ? 'text-red-700' : 'text-brand-800')}>
             {fmt(actual)} <span className="font-normal text-slate-500">of</span> {money(budget, cur)}
-          </p>
-        </div>
-        <div className={HEAD_GRID + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
-          <span className="pl-2">Line</span>
-          <span>Type</span>
-          <span>Priority</span>
-          <span className="text-right">Budget ({cur})</span>
-          <span className="text-right">Actual</span>
-          <span className="text-right">Left</span>
-          <span />
-        </div>
-        {lines.map((line) => (
-          <LineRow
-            key={line.id}
-            line={line}
-            actual={month.actuals[line.id]}
-            rate={rate}
-            locked={locked}
-            run={run}
-            goalName={line.goal_id ? goalNames.get(line.goal_id) : undefined}
-          />
-        ))}
-        {lines.length === 0 && <p className="px-6 py-3 text-sm text-slate-500">No lines in this section yet.</p>}
-        {!locked && <AddLine group={group} currency={cur} monthId={month.id} run={run} />}
+          </span>
+        </button>
+        {!collapsed && (
+          <>
+            <div className={HEAD_GRID + ' border-b border-slate-200 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500'}>
+              <span className="pl-2">Line</span>
+              <span>Type</span>
+              <span>Priority</span>
+              <span className="text-right">Budget ({cur})</span>
+              <span className="text-right">Actual</span>
+              <span className="text-right">Left</span>
+              <span />
+            </div>
+            {lines.map((line) => (
+              <LineRow
+                key={line.id}
+                line={line}
+                actual={month.actuals[line.id]}
+                rate={rate}
+                locked={locked}
+                run={run}
+                goalName={line.goal_id ? goalNames.get(line.goal_id) : undefined}
+              />
+            ))}
+            {lines.length === 0 && <p className="px-6 py-3 text-sm text-slate-500">No lines in this section yet.</p>}
+            {!locked && <AddLine group={group} currency={cur} monthId={month.id} run={run} />}
+          </>
+        )}
       </div>
     </Card>
   )
