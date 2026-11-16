@@ -1,4 +1,4 @@
-"""Budget Track backend. Run with:  uvicorn app.main:app --reload --port 8000"""
+"""Lets Budget 2gether backend. Run with:  uvicorn app.main:app --reload --port 8000"""
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -20,7 +20,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Budget Track", lifespan=lifespan)
+app = FastAPI(title="Lets Budget 2gether", lifespan=lifespan)
 app.include_router(auth_router)  # sign-in itself is open
 
 # Every data route needs a signed-in session.

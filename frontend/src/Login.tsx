@@ -55,7 +55,7 @@ export default function Login(props: { setUp: boolean; minLength: number; onSign
         <div className="mb-5 flex items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-leaf text-lg font-black text-brand-950">B</span>
           <div>
-            <p className="text-lg font-bold leading-tight text-brand-900">Budget Track</p>
+            <p className="text-lg font-bold leading-tight text-brand-900">Lets Budget 2gether</p>
             <p className="text-xs text-slate-500">Plan · Save first · Review</p>
           </div>
         </div>

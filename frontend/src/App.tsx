@@ -84,7 +84,7 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
               B
             </span>
             <div>
-              <p className="text-lg font-bold leading-tight">Budget Track</p>
+              <p className="text-lg font-bold leading-tight">Lets Budget 2gether</p>
               <p className="text-xs text-brand-300">Plan · Save first · Review</p>
             </div>
           </div>
