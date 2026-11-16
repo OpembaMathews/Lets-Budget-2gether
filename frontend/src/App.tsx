@@ -81,7 +81,7 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
         <div className="border-b border-brand-800 px-5 py-5">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-leaf text-lg font-black text-brand-950">
-              B
+              2
             </span>
             <div>
               <p className="text-lg font-bold leading-tight">Lets Budget 2gether</p>
