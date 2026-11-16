@@ -71,7 +71,7 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
         </p>
         <div className="divide-y divide-slate-100">
           {meta.accounts.map((account) => (
-            <div key={account.id} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 py-2 text-sm md:grid-cols-[minmax(160px,1fr)_90px_150px_90px_40px] md:py-1.5">
+            <div key={account.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 py-2 text-sm md:grid-cols-[minmax(160px,1fr)_90px_150px_90px_40px] md:py-1.5">
               <EditBox
                 ariaLabel="Account name"
                 value={account.name}
@@ -166,16 +166,17 @@ function IncomeSources(props: { currencyOptions: Options; run: Run }) {
       <div className="space-y-2">
         {sources.map((s) => {
           const save = (body: Partial<Source>) => run(() => api.updateSource(s.id, body))
-          const field = 'flex items-center gap-1.5 text-xs text-slate-500'
+          const field = 'flex items-center gap-1.5 whitespace-nowrap text-xs text-slate-500'
           return (
             <div key={s.id} className={'rounded-lg border px-3 py-2 ' + (s.active ? 'border-slate-200' : 'border-dashed border-slate-300 bg-slate-50')}>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="min-w-[160px] flex-1">
+              {/* On a phone: the name and ✕, then currency and regularity, then pay day and in use. */}
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 md:flex md:flex-wrap">
+                <div className="order-1 col-span-2 min-w-0 md:order-none md:min-w-[160px] md:flex-1">
                   <EditBox ariaLabel="Source name" value={s.name} className="font-semibold text-brand-900" onCommit={(v) => save({ name: v })} />
                 </div>
-                <Select ariaLabel="Source currency" value={s.currency_code} options={currencyOptions} onChange={(v) => save({ currency_code: v })} />
-                <Select ariaLabel="Regular or irregular" value={s.reliability} options={RELIABILITY} onChange={(v) => save({ reliability: v as Source['reliability'] })} />
-                <label className={field}>
+                <Select ariaLabel="Source currency" value={s.currency_code} options={currencyOptions} onChange={(v) => save({ currency_code: v })} className="order-3 md:order-none" />
+                <Select ariaLabel="Regular or irregular" value={s.reliability} options={RELIABILITY} onChange={(v) => save({ reliability: v as Source['reliability'] })} className="order-4 col-span-2 md:order-none" />
+                <label className={field + ' order-5 pl-2 md:order-none md:pl-0'}>
                   Pay day
                   <span className="w-12">
                     <EditBox
@@ -188,14 +189,14 @@ function IncomeSources(props: { currencyOptions: Options; run: Run }) {
                     />
                   </span>
                 </label>
-                <label className={field}>
+                <label className={field + ' order-6 col-span-2 md:order-none'}>
                   <input type="checkbox" className="accent-brand-700" checked={s.active} onChange={(e) => save({ active: e.target.checked })} />
                   In use
                 </label>
                 <button
                   type="button"
                   title="Remove this source"
-                  className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
+                  className="order-2 justify-self-end rounded-md px-2.5 py-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700 md:order-none md:px-1.5 md:py-1"
                   onClick={() => {
                     if (window.confirm(`Remove the income source "${s.name}"?`)) void run(() => api.deleteSource(s.id))
                   }}
@@ -203,8 +204,8 @@ function IncomeSources(props: { currencyOptions: Options; run: Run }) {
                   ✕
                 </button>
               </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Saving rule</span>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 pl-2 pt-2 md:mt-1.5 md:gap-2 md:border-t-0 md:pt-0">
+                <span className="w-full text-xs font-semibold uppercase tracking-wide text-slate-500 md:w-auto">Saving rule</span>
                 <Select ariaLabel="Saving rule" value={s.rule_type} options={RULES} onChange={(v) => save({ rule_type: v as Source['rule_type'] })} />
                 {(s.rule_type === 'percent_first' || s.rule_type === 'three_way') && (
                   <label className={field}>
@@ -244,7 +245,7 @@ function IncomeSources(props: { currencyOptions: Options; run: Run }) {
           void run(() => api.createSource({ name: trimmed, currency_code: currency, save_percent: '20' })).then(() => setName(''))
         }}
       >
-        <input aria-label="New income source" className={box + ' w-64'} placeholder="New income source" value={name} onChange={(e) => setName(e.target.value)} />
+        <input aria-label="New income source" className={box + ' w-full sm:w-64'} placeholder="New income source" value={name} onChange={(e) => setName(e.target.value)} />
         <Select ariaLabel="New source currency" value={currency} options={currencyOptions} onChange={setCurrency} />
         <Button type="submit" disabled={!name.trim()}>
           Add source
@@ -258,7 +259,7 @@ function LocationCard(props: { location: Location; currencyOptions: Options; rec
   const { location, currencyOptions, recipients, run } = props
   const [newSection, setNewSection] = useState('')
   return (
-    <div className="rounded-lg border border-slate-200">
+    <div className="min-w-0 rounded-lg border border-slate-200">
       <div className="flex items-center gap-2 rounded-t-lg bg-brand-50 px-3 py-2">
         <EditBox
           ariaLabel="Location name"
@@ -285,17 +286,18 @@ function LocationCard(props: { location: Location; currencyOptions: Options; rec
       </div>
       <div className="divide-y divide-slate-100 px-3">
         {location.groups.map((group) => (
-          <div key={group.id} className="flex items-center gap-2 py-1 text-sm">
+          <div key={group.id} className="flex flex-wrap items-center gap-x-2 py-1 text-sm md:flex-nowrap">
             <EditBox
               ariaLabel="Section name"
               value={group.name}
+              className="flex-1"
               onCommit={(v) => run(() => api.updateGroup(group.id, { name: v }))}
             />
             {location.default_currency === 'KES' && (
               <select
                 aria-label={`Usual recipient for ${group.name}`}
                 title="Who money for this section is usually sent to"
-                className="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 outline-none focus:border-brand-600"
+                className="order-3 mb-1.5 ml-2 w-[calc(100%-0.5rem)] rounded-md border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 outline-none focus:border-brand-600 md:order-none md:mb-0 md:ml-0 md:w-auto md:shrink-0"
                 value={group.usual_recipient_id ?? ''}
                 onChange={(e) =>
                   run(() => api.updateGroup(group.id, { usual_recipient_id: e.target.value ? Number(e.target.value) : null }))
@@ -314,7 +316,7 @@ function LocationCard(props: { location: Location; currencyOptions: Options; rec
             <button
               type="button"
               title="Remove this section"
-              className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
+              className="order-2 rounded-md px-2.5 py-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700 md:order-none md:px-1.5 md:py-1"
               onClick={() => {
                 if (window.confirm(`Remove the section "${group.name}"?`)) void run(() => api.deleteGroup(group.id))
               }}
@@ -335,7 +337,7 @@ function LocationCard(props: { location: Location; currencyOptions: Options; rec
       >
         <input
           aria-label={`New section in ${location.name}`}
-          className={box + ' flex-1'}
+          className={box + ' min-w-0 flex-1'}
           placeholder="Add a section…"
           value={newSection}
           onChange={(e) => setNewSection(e.target.value)}
@@ -363,7 +365,7 @@ function AddLocation(props: { currencyOptions: Options; run: Run }) {
     >
       <input
         aria-label="New location name"
-        className={box + ' w-64'}
+        className={box + ' w-full sm:w-64'}
         placeholder="New location, e.g. Nairobi"
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -394,7 +396,7 @@ function AddAccount(props: { currencyOptions: Options; run: Run }) {
     >
       <input
         aria-label="New account name"
-        className={box + ' w-64'}
+        className={box + ' w-full sm:w-64'}
         placeholder="New account name"
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -421,11 +423,12 @@ function Recipients(props: { run: Run }) {
       </p>
       <div className="divide-y divide-slate-100">
         {recipients.map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center gap-2 py-1.5 text-sm">
-            <div className="min-w-[140px] flex-1">
+          <div key={r.id} className="grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-0.5 py-2 text-sm md:flex md:flex-wrap md:gap-2 md:py-1.5">
+            {/* On a phone: the name and ✕, then the payment method and in use. */}
+            <div className="order-1 min-w-0 md:order-none md:min-w-[140px] md:flex-1">
               <EditBox ariaLabel="Recipient name" value={r.name} className="font-medium" onCommit={(v) => run(() => api.updateRecipient(r.id, { name: v }))} />
             </div>
-            <div className="w-36">
+            <div className="order-3 min-w-0 md:order-none md:w-36">
               <EditBox
                 ariaLabel="Usual payment method"
                 value={r.usual_method ?? ''}
@@ -434,7 +437,7 @@ function Recipients(props: { run: Run }) {
                 className="text-slate-600"
               />
             </div>
-            <label className="flex items-center gap-1.5 text-slate-600">
+            <label className="order-4 flex items-center gap-1.5 whitespace-nowrap pr-1 text-slate-600 md:order-none md:pr-0">
               <input
                 type="checkbox"
                 className="accent-brand-700"
@@ -446,7 +449,7 @@ function Recipients(props: { run: Run }) {
             <button
               type="button"
               title="Remove this recipient"
-              className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
+              className="order-2 justify-self-end rounded-md px-2.5 py-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700 md:order-none md:px-1.5 md:py-1"
               onClick={() => {
                 if (window.confirm(`Remove the recipient "${r.name}"?`)) void run(() => api.deleteRecipient(r.id))
               }}
@@ -465,8 +468,8 @@ function Recipients(props: { run: Run }) {
           void run(() => api.createRecipient({ name: trimmed, usual_method: method.trim() || null })).then(() => setName(''))
         }}
       >
-        <input aria-label="New recipient name" className={box + ' w-56'} placeholder="New recipient, e.g. Brother" value={name} onChange={(e) => setName(e.target.value)} />
-        <input aria-label="New recipient payment method" className={box + ' w-36'} placeholder="Payment method" value={method} onChange={(e) => setMethod(e.target.value)} />
+        <input aria-label="New recipient name" className={box + ' w-full sm:w-56'} placeholder="New recipient, e.g. Brother" value={name} onChange={(e) => setName(e.target.value)} />
+        <input aria-label="New recipient payment method" className={box + ' min-w-0 flex-1 sm:w-36 sm:flex-none'} placeholder="Payment method" value={method} onChange={(e) => setMethod(e.target.value)} />
         <Button type="submit" disabled={!name.trim()}>
           Add recipient
         </Button>
@@ -635,9 +638,9 @@ function PasswordCard() {
             .catch((err: Error) => setMessage({ ok: false, text: err.message }))
         }}
       >
-        <input aria-label="Current password" type="password" autoComplete="current-password" className={box + ' w-48'} placeholder="Current password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-        <input aria-label="New password" type="password" autoComplete="new-password" className={box + ' w-48'} placeholder="New (6+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
-        <input aria-label="Repeat new password" type="password" autoComplete="new-password" className={box + ' w-48'} placeholder="New again" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+        <input aria-label="Current password" type="password" autoComplete="current-password" className={box + ' w-full sm:w-48'} placeholder="Current password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        <input aria-label="New password" type="password" autoComplete="new-password" className={box + ' w-full sm:w-48'} placeholder="New (6+ characters)" value={next} onChange={(e) => setNext(e.target.value)} />
+        <input aria-label="Repeat new password" type="password" autoComplete="new-password" className={box + ' w-full sm:w-48'} placeholder="New again" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
         <Button type="submit" disabled={!valid}>
           Change password
         </Button>
