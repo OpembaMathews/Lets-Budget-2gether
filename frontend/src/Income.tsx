@@ -93,7 +93,8 @@ export default function Income(props: { month: MonthSummary; onError: (m: string
             <ExpectedRow key={s.id} source={s} monthId={month.id} locked={locked} run={run} />
           ))}
           <p className="px-4 py-2 text-xs text-slate-500">
-            Only regular income counts toward covering the plan. Sources and their rules are changed in Settings.
+            Click a source's name to rename it. Only regular income counts toward covering the plan. Sources are
+            added and their rules changed in Settings.
           </p>
         </div>
       </Card>
@@ -262,7 +263,12 @@ function ExpectedRow(props: { source: SourceRow; monthId: number; locked: boolea
   return (
     <div className="grid grid-cols-[minmax(150px,1fr)_88px_112px_48px_100px] items-center gap-2 border-b border-slate-100 px-4 py-1.5 text-sm">
       <div className="min-w-0">
-        <p className="font-medium">{s.name}</p>
+        <EditBox
+          ariaLabel={`Name of ${s.name}`}
+          value={s.name}
+          className="-ml-2 font-medium"
+          onCommit={(v) => run(() => api.updateSource(s.id, { name: v }))}
+        />
         <p className="truncate text-xs text-slate-500">{ruleText(s)}</p>
       </div>
       <span>

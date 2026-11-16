@@ -6,6 +6,45 @@ import { useRun } from './hooks'
 import { FitCard } from './Income'
 import { Button, Card } from './ui'
 
+/** For a month that has been started: how many days are left in it. */
+function Countdown(props: { month: MonthSummary }) {
+  const { year, month } = props.month
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const lastDay = new Date(year, month, 0).getDate()
+  const monthsAway = (year - today.getFullYear()) * 12 + (month - 1 - today.getMonth())
+  const days = (n: number) => (n === 1 ? 'day' : 'days')
+
+  let big: string
+  let small: string
+  let passed = 0
+  if (monthsAway > 0) {
+    const until = Math.round((new Date(year, month - 1, 1).getTime() - today.getTime()) / 86_400_000)
+    big = String(until)
+    small = `${days(until)} until it begins`
+  } else if (monthsAway < 0) {
+    big = 'Month over'
+    small = 'Close it in Review'
+    passed = 1
+  } else {
+    const left = lastDay - today.getDate()
+    big = left === 0 ? 'Last day' : String(left)
+    small = (left === 0 ? '' : `${days(left)} left · `) + `day ${today.getDate()} of ${lastDay}`
+    passed = today.getDate() / lastDay
+  }
+  return (
+    <div className="min-w-[150px] rounded-xl border border-brand-100 bg-brand-50 px-4 py-2" title="Days left in this month">
+      <p className="flex items-baseline gap-1.5">
+        <span className="num text-2xl font-bold leading-none text-brand-900">{big}</span>
+        <span className="text-xs text-slate-600">{small}</span>
+      </p>
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-brand-100">
+        <div className="h-full rounded-full bg-brand-600" style={{ width: `${Math.round(passed * 100)}%` }} />
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard(props: {
   month: MonthSummary
   meta: Meta
@@ -33,7 +72,10 @@ export default function Dashboard(props: {
           <h1 className="text-2xl font-bold text-brand-900">{monthLabel(month)}</h1>
           <p className="mt-1 text-sm text-slate-600">Where the month stands right now.</p>
         </div>
-        {view.status !== 'closed' && <Button onClick={onAddIncome}>+ Add income</Button>}
+        <div className="flex flex-wrap items-center gap-3">
+          {view.status === 'active' && <Countdown month={month} />}
+          {view.status !== 'closed' && <Button onClick={onAddIncome}>+ Add income</Button>}
+        </div>
       </div>
 
       <FitCard view={view} run={run} />
