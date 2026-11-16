@@ -109,30 +109,23 @@ function ReceivedSoFar(props: { view: IncomeView }) {
   const { view } = props
   const s = view.summary
   const native = Object.entries(s.arrived.native)
-  const expected = Number(view.fit.reliable.KES) + Number(view.fit.irregular.KES)
+  // Every card leads with NTD; KES is the smaller figure under it.
+  const expected = Number(view.fit.reliable.NTD) + Number(view.fit.irregular.NTD)
   const freeNative = Object.entries(s.free.native)
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div className="rounded-xl bg-brand-800 p-4 text-white shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Received so far</p>
-        {native.length === 0 && <p className="mt-1 text-2xl font-bold">Nothing yet</p>}
-        {native.map(([code, amount]) => (
-          <p key={code} className="num mt-1 text-2xl font-bold">
-            {money(amount, code)}
-          </p>
-        ))}
+        <p className="num mt-1 text-2xl font-bold">{native.length === 0 ? 'Nothing yet' : money(s.arrived.NTD, 'NTD')}</p>
         <p className="num text-sm text-brand-100">
-          ≈ {money(s.arrived.KES, 'KES')} of {money(expected, 'KES')} expected
+          of {money(expected, 'NTD')} expected · ≈ {money(s.arrived.KES, 'KES')}
         </p>
       </div>
       <Card className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Saved from it</p>
-        {Object.keys(s.savings_reserved.native).length === 0 && <p className="mt-1 text-2xl font-bold text-leaf-dark">–</p>}
-        {Object.entries(s.savings_reserved.native).map(([code, amount]) => (
-          <p key={code} className="num mt-1 text-2xl font-bold text-leaf-dark">
-            {money(amount, code)}
-          </p>
-        ))}
+        <p className="num mt-1 text-2xl font-bold text-leaf-dark">
+          {Object.keys(s.savings_reserved.native).length === 0 ? '–' : money(s.savings_reserved.NTD, 'NTD')}
+        </p>
         <p className="num text-sm text-slate-500">
           ≈ {money(s.savings_reserved.KES, 'KES')}
           {s.core ? (Number(s.core.covered) >= Number(s.core.planned) ? ' · core saving taken' : ' · core saving not yet taken') : ''}
@@ -140,13 +133,10 @@ function ReceivedSoFar(props: { view: IncomeView }) {
       </Card>
       <Card className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Free to spend</p>
-        {freeNative.length === 0 && <p className="mt-1 text-2xl font-bold text-brand-900">–</p>}
-        {freeNative.map(([code, amount]) => (
-          <p key={code} className="num mt-1 text-2xl font-bold text-brand-900">
-            {money(amount, code)}
-          </p>
-        ))}
-        <p className="text-sm text-slate-500">After savings and bills</p>
+        <p className="num mt-1 text-2xl font-bold text-brand-900">{freeNative.length === 0 ? '–' : money(s.free.NTD, 'NTD')}</p>
+        <p className="num text-sm text-slate-500">
+          {freeNative.length > 0 && `≈ ${money(s.free.KES, 'KES')} · `}After savings and bills
+        </p>
       </Card>
     </div>
   )
@@ -165,12 +155,12 @@ export function FitCard(props: { view: IncomeView; run: Run }) {
     <div className={'rounded-xl border p-4 ' + tone}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid flex-1 grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-3">
-          <Figure label="Reliable income expected" value={money(fit.reliable.KES, 'KES')} sub={`≈ ${money(fit.reliable.NTD, 'NTD')}`} />
-          <Figure label="Plan" value={money(fit.plan.KES, 'KES')} sub={`≈ ${money(fit.plan.NTD, 'NTD')}`} />
+          <Figure label="Reliable income expected" value={money(fit.reliable.NTD, 'NTD')} sub={`≈ ${money(fit.reliable.KES, 'KES')}`} />
+          <Figure label="Plan" value={money(fit.plan.NTD, 'NTD')} sub={`≈ ${money(fit.plan.KES, 'KES')}`} />
           <Figure
             label={fit.fits ? 'Room left' : 'Plan is too large by'}
-            value={money(Math.abs(gap), 'KES')}
-            sub={fit.fits ? 'The plan fits your reliable income' : `≈ ${money(fit.gap_ntd, 'NTD')}`}
+            value={money(Math.abs(Number(fit.plan.NTD) - Number(fit.reliable.NTD)), 'NTD')}
+            sub={fit.fits ? 'The plan fits your reliable income' : `≈ ${money(Math.abs(gap), 'KES')}`}
             strong={!fit.fits}
           />
         </div>
@@ -187,7 +177,7 @@ export function FitCard(props: { view: IncomeView; run: Run }) {
 
       {Number(fit.irregular.KES) > 0 && (
         <p className="mt-2 text-xs text-slate-600">
-          Irregular income of {money(fit.irregular.KES, 'KES')} is expected too, but it is not counted toward the plan.
+          Irregular income of {money(fit.irregular.NTD, 'NTD')} is expected too, but it is not counted toward the plan.
         </p>
       )}
 
@@ -489,9 +479,9 @@ function SplitPanel(props: { arrival: Arrival; view: IncomeView; run: Run; onClo
 
       {short && (
         <div className="border-t border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
-          Payments so far do not cover every essential yet. <strong>{money(left.KES, 'KES')}</strong> of essentials
+          Payments so far do not cover every essential yet. <strong>{money(left.NTD, 'NTD')}</strong> of essentials
           still need funding. Reliable income still expected this month:{' '}
-          <strong>{money(view.summary.upcoming_reliable.KES, 'KES')}</strong>.
+          <strong>{money(view.summary.upcoming_reliable.NTD, 'NTD')}</strong>.
         </div>
       )}
 

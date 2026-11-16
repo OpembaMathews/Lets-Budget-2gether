@@ -143,6 +143,7 @@ def goals_view(db: Session, month_id: int | None) -> dict:
                     "where": f"{locations[group.location_id].name} / {group.name}" if group else None,
                     "currency_code": line.currency_code, "planned": line.planned,
                     "actual": Decimal(a["actual"]), "planned_in_goal_currency": planned,
+                    "actual_in_goal_currency": got,
                     "set_aside_to_send": Decimal(a["set_aside_to_send"]),
                 })
 
@@ -224,7 +225,10 @@ def goals_view(db: Session, month_id: int | None) -> dict:
             months_left = 0
         elif pace > 0 and chosen is not None:
             months_left = math.ceil(needed / pace)
-            index = chosen.year * 12 + (chosen.month - 1) + months_left - 1
+            # this month's amount is already in `funded` once given, so the count starts next month
+            given = sum((l["actual_in_goal_currency"] for l in chosen_lines[g.id]), ZERO)
+            start_next = 1 if this_month > 0 and given >= this_month else 0
+            index = chosen.year * 12 + (chosen.month - 1) + months_left - 1 + start_next
             finish = date(index // 12, index % 12 + 1, 1)
         on_time = None
         if g.target_date and needed > 0:

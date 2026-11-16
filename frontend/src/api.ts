@@ -316,11 +316,29 @@ export interface HistoryRow {
   saved_kes: Money
   free_kes: Money
   sent_kes: Money
+  income_ntd: Money
+  budget_ntd: Money
+  actual_ntd: Money
+  saved_ntd: Money
+  sent_ntd: Money
 }
 
 export interface HistoryView {
   months: HistoryRow[]
-  years: { year: number; months: number; income_kes: Money; budget_kes: Money; actual_kes: Money; saved_kes: Money; sent_kes: Money }[]
+  years: {
+    year: number
+    months: number
+    income_kes: Money
+    budget_kes: Money
+    actual_kes: Money
+    saved_kes: Money
+    sent_kes: Money
+    income_ntd: Money
+    budget_ntd: Money
+    actual_ntd: Money
+    saved_ntd: Money
+    sent_ntd: Money
+  }[]
 }
 
 export interface CompareView {
@@ -360,6 +378,7 @@ export interface DebtsView {
   debts: Debt[]
   totals: Record<string, Money>
   total_kes: Money
+  total_ntd: Money
   linkable_lines: { line_id: number; name: string; currency_code: string; planned: Money; kind: string; where: string | null }[]
 }
 

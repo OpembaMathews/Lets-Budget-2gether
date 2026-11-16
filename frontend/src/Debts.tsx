@@ -45,7 +45,7 @@ export default function Debts(props: { month: MonthSummary; meta: Meta; onError:
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-brand-800 p-4 text-white shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Total owed</p>
-          <p className="num mt-1 text-2xl font-bold">{money(view.total_kes, 'KES')}</p>
+          <p className="num mt-1 text-2xl font-bold">{money(view.total_ntd, 'NTD')}</p>
           <p className="text-sm text-brand-100">
             {Object.entries(view.totals).map(([c, v]) => money(v, c)).join(' + ') || 'Nothing owed'}
           </p>

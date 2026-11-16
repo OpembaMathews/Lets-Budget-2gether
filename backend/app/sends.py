@@ -246,11 +246,11 @@ def sends_view(db: Session, month: Month) -> dict:
             # who it goes to: the line's own recipient, or else the section's usual one
             "recipient_id": line.recipient_id or group.usual_recipient_id,
             "own_recipient": line.recipient_id is not None,
-            "set_aside": min(set_aside.get(line.id, ZERO), line.planned),
+            "set_aside": aside,
             "sent": got, "to_send": to_send, "remaining": remaining, "waiting": waiting, "over": over,
         })
         block["planned"] += line.planned
-        block["set_aside"] += min(set_aside.get(line.id, ZERO), line.planned)
+        block["set_aside"] += aside
         block["sent"] += got
         block["to_send"] += to_send
         block["remaining"] += remaining

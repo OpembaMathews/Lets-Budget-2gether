@@ -60,10 +60,11 @@ export default function Dashboard(props: {
   if (!query.data) return <p className="text-red-700">Could not load this month.</p>
   const view = query.data
   const s = view.summary
-  const expectedAll = Number(view.fit.reliable.KES) + Number(view.fit.irregular.KES)
+  // Every card leads with NTD; KES is the smaller figure under it.
+  const expectedAll = Number(view.fit.reliable.NTD) + Number(view.fit.irregular.NTD)
   const coreDone = s.core !== null && Number(s.core.covered) >= Number(s.core.planned)
-  const essentialsLeft = Number(s.essentials_left.KES)
-  const freeNative = Object.entries(s.free.native)
+  const essentialsLeft = Number(s.essentials_left.NTD)
+  const nothing = (t: { native: Record<string, string> }) => Object.keys(t.native).length === 0
 
   return (
     <div className="space-y-6">
@@ -83,25 +84,19 @@ export default function Dashboard(props: {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
           <Label>Income received</Label>
-          {Object.keys(s.arrived.native).length === 0 && <Big>Nothing yet</Big>}
-          {Object.entries(s.arrived.native).map(([code, amount]) => (
-            <Big key={code}>{money(amount, code)}</Big>
-          ))}
+          <Big>{nothing(s.arrived) ? 'Nothing yet' : money(s.arrived.NTD, 'NTD')}</Big>
           <Small>
-            ≈ {money(s.arrived.KES, 'KES')} of {money(expectedAll, 'KES')} expected
+            of {money(expectedAll, 'NTD')} expected · ≈ {money(s.arrived.KES, 'KES')}
           </Small>
-          <Bar part={Number(s.arrived.KES)} whole={expectedAll} />
+          <Bar part={Number(s.arrived.NTD)} whole={expectedAll} />
         </Card>
 
         <div className="rounded-xl bg-brand-800 p-4 text-white shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Saved so far</p>
-          {Object.keys(s.savings_reserved.native).length === 0 && <p className="mt-1 text-2xl font-bold">Nothing yet</p>}
-          {Object.entries(s.savings_reserved.native).map(([code, amount]) => (
-            <p key={code} className="num mt-1 text-2xl font-bold">
-              {money(amount, code)}
-            </p>
-          ))}
-          {Object.keys(s.savings_reserved.native).length > 0 && (
+          <p className="num mt-1 text-2xl font-bold">
+            {nothing(s.savings_reserved) ? 'Nothing yet' : money(s.savings_reserved.NTD, 'NTD')}
+          </p>
+          {!nothing(s.savings_reserved) && (
             <p className="num text-sm text-brand-100">≈ {money(s.savings_reserved.KES, 'KES')}</p>
           )}
           {s.core ? (
@@ -116,18 +111,18 @@ export default function Dashboard(props: {
 
         <Card className="p-4">
           <Label>Essentials funded</Label>
-          <Big>{money(s.essential.covered.KES, 'KES')}</Big>
-          <Small>of {money(s.essential.planned.KES, 'KES')}</Small>
-          <Bar part={Number(s.essential.covered.KES)} whole={Number(s.essential.planned.KES)} />
-          {essentialsLeft > 0 && <p className="num mt-2 text-xs text-amber-800">{money(essentialsLeft, 'KES')} still to fund</p>}
+          <Big>{money(s.essential.covered.NTD, 'NTD')}</Big>
+          <Small>
+            of {money(s.essential.planned.NTD, 'NTD')} · ≈ {money(s.essential.covered.KES, 'KES')}
+          </Small>
+          <Bar part={Number(s.essential.covered.NTD)} whole={Number(s.essential.planned.NTD)} />
+          {essentialsLeft > 0 && <p className="num mt-2 text-xs text-amber-800">{money(essentialsLeft, 'NTD')} still to fund</p>}
         </Card>
 
         <Card className="p-4">
           <Label>Free to spend</Label>
-          {freeNative.length === 0 && <Big>–</Big>}
-          {freeNative.map(([code, amount]) => (
-            <Big key={code}>{money(amount, code)}</Big>
-          ))}
+          <Big>{nothing(s.free) ? '–' : money(s.free.NTD, 'NTD')}</Big>
+          {!nothing(s.free) && <Small>≈ {money(s.free.KES, 'KES')}</Small>}
           <Small>Left after savings and bills from payments so far</Small>
         </Card>
       </div>
@@ -140,16 +135,15 @@ export default function Dashboard(props: {
             {meta.locations.map((loc) => {
               const block: Progress | undefined = s.locations[loc.id]
               if (!block) return null
-              const cur = loc.default_currency as 'KES' | 'NTD'
               return (
                 <div key={loc.id}>
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="font-semibold">{loc.name}</span>
                     <span className="num text-slate-600">
-                      {fmt(block.covered[cur])} of {money(block.planned[cur], cur)}
+                      {fmt(block.covered.NTD)} of {money(block.planned.NTD, 'NTD')}
                     </span>
                   </div>
-                  <Bar part={Number(block.covered[cur])} whole={Number(block.planned[cur])} />
+                  <Bar part={Number(block.covered.NTD)} whole={Number(block.planned.NTD)} />
                 </div>
               )
             })}
@@ -157,10 +151,10 @@ export default function Dashboard(props: {
               <div className="flex items-baseline justify-between text-sm">
                 <span className="font-semibold text-slate-600">Flexible lines</span>
                 <span className="num text-slate-600">
-                  {fmt(s.flexible.covered.KES)} of {money(s.flexible.planned.KES, 'KES')}
+                  {fmt(s.flexible.covered.NTD)} of {money(s.flexible.planned.NTD, 'NTD')}
                 </span>
               </div>
-              <Bar part={Number(s.flexible.covered.KES)} whole={Number(s.flexible.planned.KES)} muted />
+              <Bar part={Number(s.flexible.covered.NTD)} whole={Number(s.flexible.planned.NTD)} muted />
             </div>
           </div>
         </Card>
@@ -186,7 +180,7 @@ export default function Dashboard(props: {
         </Card>
       </div>
 
-      {debts.data && Number(debts.data.total_kes) > 0 && (
+      {debts.data && Number(debts.data.total_ntd) > 0 && (
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <h2 className="font-semibold text-brand-900">Debts</h2>
@@ -195,7 +189,7 @@ export default function Dashboard(props: {
               {Object.entries(debts.data.totals).map(([c, v]) => money(v, c)).join(' + ')}
             </p>
           </div>
-          <p className="num text-xl font-bold text-red-700">{money(debts.data.total_kes, 'KES')} owed</p>
+          <p className="num text-xl font-bold text-red-700">{money(debts.data.total_ntd, 'NTD')} owed</p>
         </Card>
       )}
 

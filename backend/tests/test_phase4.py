@@ -143,6 +143,8 @@ def test_debt_balance_from_repayment_lines_and_entries(api):
     fuliza = api.get("/api/debts", params={"month_id": mid}).json()["debts"][0]
     assert fuliza["repaid"] == "2000.00" and fuliza["balance"] == "4000.00" and fuliza["this_month"] == "2000.00"
     assert fuliza["months_left"] == 2
+    # November's repayment is made, so the two still to come are December and January
+    assert fuliza["clear_by"] == "2027-01-01"
 
     # borrowing more and repaying by hand
     api.post(f"/api/debts/{fuliza['id']}/entries", params={"month_id": mid},

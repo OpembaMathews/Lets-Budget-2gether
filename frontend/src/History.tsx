@@ -22,7 +22,7 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-900">History</h1>
-        <p className="mt-1 text-sm text-slate-600">Every month you have planned, and how they compare. Amounts are in KES.</p>
+        <p className="mt-1 text-sm text-slate-600">Every month you have planned, and how they compare. Amounts are in NTD, each month at its own rate.</p>
       </div>
 
       <Chart months={months} />
@@ -51,23 +51,23 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
               <span className="text-right text-xs capitalize text-slate-500 md:text-left">{m.status}</span>
               <span className="num text-right">
                 <PhoneLabel>Income</PhoneLabel>
-                {fmt(m.income_kes)}
+                {fmt(m.income_ntd)}
               </span>
               <span className="num text-right text-slate-600">
                 <PhoneLabel>Budget</PhoneLabel>
-                {fmt(m.budget_kes)}
+                {fmt(m.budget_ntd)}
               </span>
-              <span className={'num text-right ' + (Number(m.actual_kes) > Number(m.budget_kes) ? 'font-semibold text-red-700' : '')}>
+              <span className={'num text-right ' + (Number(m.actual_ntd) > Number(m.budget_ntd) ? 'font-semibold text-red-700' : '')}>
                 <PhoneLabel>Actual</PhoneLabel>
-                {fmt(m.actual_kes)}
+                {fmt(m.actual_ntd)}
               </span>
               <span className="num text-right text-leaf-dark">
                 <PhoneLabel>Saved</PhoneLabel>
-                {fmt(m.saved_kes)}
+                {fmt(m.saved_ntd)}
               </span>
               <span className="num text-right">
                 <PhoneLabel>Sent</PhoneLabel>
-                {fmt(m.sent_kes)}
+                {fmt(m.sent_ntd)}
               </span>
             </button>
           ))}
@@ -86,15 +86,15 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
             <p className="text-xs text-slate-500">{y.months} month{y.months === 1 ? '' : 's'}</p>
             <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-slate-600">Income</dt>
-              <dd className="num text-right font-semibold">{money(y.income_kes, 'KES')}</dd>
+              <dd className="num text-right font-semibold">{money(y.income_ntd, 'NTD')}</dd>
               <dt className="text-slate-600">Budget</dt>
-              <dd className="num text-right">{money(y.budget_kes, 'KES')}</dd>
+              <dd className="num text-right">{money(y.budget_ntd, 'NTD')}</dd>
               <dt className="text-slate-600">Actual</dt>
-              <dd className="num text-right">{money(y.actual_kes, 'KES')}</dd>
+              <dd className="num text-right">{money(y.actual_ntd, 'NTD')}</dd>
               <dt className="text-slate-600">Saved</dt>
-              <dd className="num text-right text-leaf-dark">{money(y.saved_kes, 'KES')}</dd>
+              <dd className="num text-right text-leaf-dark">{money(y.saved_ntd, 'NTD')}</dd>
               <dt className="text-slate-600">Sent home</dt>
-              <dd className="num text-right">{money(y.sent_kes, 'KES')}</dd>
+              <dd className="num text-right">{money(y.sent_ntd, 'NTD')}</dd>
             </dl>
           </Card>
         ))}
@@ -119,11 +119,11 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
 function Chart(props: { months: HistoryRow[] }) {
   const ms = props.months
   if (ms.length === 0) return null
-  const top = Math.max(1, ...ms.flatMap((m) => [Number(m.income_kes), Number(m.actual_kes), Number(m.budget_kes)]))
+  const top = Math.max(1, ...ms.flatMap((m) => [Number(m.income_ntd), Number(m.actual_ntd), Number(m.budget_ntd)]))
   const series = [
-    { key: 'income_kes' as const, label: 'Income', color: 'bg-brand-700' },
-    { key: 'actual_kes' as const, label: 'Actual', color: 'bg-slate-400' },
-    { key: 'saved_kes' as const, label: 'Saved', color: 'bg-leaf' },
+    { key: 'income_ntd' as const, label: 'Income', color: 'bg-brand-700' },
+    { key: 'actual_ntd' as const, label: 'Actual', color: 'bg-slate-400' },
+    { key: 'saved_ntd' as const, label: 'Saved', color: 'bg-leaf' },
   ]
   return (
     <Card className="p-4">
@@ -144,7 +144,7 @@ function Chart(props: { months: HistoryRow[] }) {
                   key={s.key}
                   className={'w-3 rounded-t ' + s.color}
                   style={{ height: `${(Number(m[s.key]) / top) * 100}%` }}
-                  title={`${s.label}: ${money(m[s.key], 'KES')}`}
+                  title={`${s.label}: ${money(m[s.key], 'NTD')}`}
                 />
               ))}
             </div>

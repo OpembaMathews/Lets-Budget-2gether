@@ -271,7 +271,9 @@ def income_view(db: Session, month: Month) -> dict:
         arrived_by_source[arrival.source_id] = arrived_by_source.get(arrival.source_id, ZERO) + arrival.amount
         arrived.add(arrival.currency_code, arrival.amount)
         for alloc in arrival.allocations:
-            if alloc.kind in ("core_saving", "savings", "project"):
+            line = lines.get(alloc.budget_line_id) if alloc.budget_line_id else None
+            # a saving line is paid with the bills, but the money is still saved
+            if alloc.kind in ("core_saving", "savings", "project") or (line is not None and line.kind == "saving"):
                 savings.add(arrival.currency_code, alloc.amount)
             elif alloc.kind == "free":
                 free.add(arrival.currency_code, alloc.amount)

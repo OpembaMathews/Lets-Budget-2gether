@@ -186,8 +186,9 @@ function Header(props: { month: MonthDetail; locked: boolean; run: Run }) {
 function Summary(props: { month: MonthDetail; meta: Meta }) {
   const { month, meta } = props
   const t = month.totals
-  const essential = Number((t.priority.essential ?? EMPTY).KES)
-  const flexible = Number((t.priority.flexible ?? EMPTY).KES)
+  // Every card leads with NTD; KES is the smaller figure under it.
+  const essential = Number((t.priority.essential ?? EMPTY).NTD)
+  const flexible = Number((t.priority.flexible ?? EMPTY).NTD)
   const share = essential + flexible > 0 ? (essential / (essential + flexible)) * 100 : 0
   const saving = t.kind.saving ?? EMPTY
   const rate = Number(month.fx_rate_ntd_kes)
@@ -200,24 +201,23 @@ function Summary(props: { month: MonthDetail; meta: Meta }) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div className="rounded-xl bg-brand-800 p-4 text-white shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Total budget</p>
-        <p className="num mt-1 text-2xl font-bold">{money(t.grand.KES, 'KES')}</p>
-        <p className="num text-sm text-brand-100">≈ {money(t.grand.NTD, 'NTD')}</p>
+        <p className="num mt-1 text-2xl font-bold">{money(t.grand.NTD, 'NTD')}</p>
+        <p className="num text-sm text-brand-100">≈ {money(t.grand.KES, 'KES')}</p>
         <p className="num mt-2 border-t border-brand-700 pt-2 text-sm text-brand-100">
-          Actual so far: <strong className="text-white">{money(actualKes, 'KES')}</strong>
+          Actual so far: <strong className="text-white">{money(actualKes / rate, 'NTD')}</strong>
         </p>
       </div>
       {meta.locations.map((loc) => {
         const total = t.locations[loc.id] ?? EMPTY
-        const other = otherCurrency(loc.default_currency)
+        const actual = locationActual(month, loc)
         return (
           <Card key={loc.id} className="p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{loc.name}</p>
-            <p className="num mt-1 text-2xl font-bold text-brand-900">
-              {money(total[loc.default_currency as 'KES' | 'NTD'], loc.default_currency)}
-            </p>
-            <p className="num text-sm text-slate-500">≈ {money(total[other as 'KES' | 'NTD'], other)}</p>
+            <p className="num mt-1 text-2xl font-bold text-brand-900">{money(total.NTD, 'NTD')}</p>
+            <p className="num text-sm text-slate-500">≈ {money(total.KES, 'KES')}</p>
             <p className="num mt-2 border-t border-slate-100 pt-2 text-sm text-slate-600">
-              Actual so far: <strong className="text-brand-900">{money(locationActual(month, loc), loc.default_currency)}</strong>
+              Actual so far:{' '}
+              <strong className="text-brand-900">{money(loc.default_currency === 'NTD' ? actual : actual / rate, 'NTD')}</strong>
             </p>
           </Card>
         )
@@ -227,13 +227,13 @@ function Summary(props: { month: MonthDetail; meta: Meta }) {
         <p className="num mt-1 text-lg font-bold text-brand-900">
           {fmt(essential)} <span className="font-normal text-slate-400">·</span>{' '}
           <span className="text-slate-600">{fmt(flexible)}</span>
-          <span className="ml-1 text-xs font-normal text-slate-500">KES</span>
+          <span className="ml-1 text-xs font-normal text-slate-500">NTD</span>
         </p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200" title={`${share.toFixed(0)}% essential`}>
           <div className="h-full bg-brand-600" style={{ width: `${share}%` }} />
         </div>
         <p className="num mt-2 text-sm text-slate-600">
-          Savings in plan: <strong className="text-leaf-dark">{money(saving.KES, 'KES')}</strong>
+          Savings in plan: <strong className="text-leaf-dark">{money(saving.NTD, 'NTD')}</strong>
         </p>
       </Card>
     </div>

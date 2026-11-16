@@ -83,6 +83,7 @@ def debts_view(db: Session, month_id: int | None) -> dict:
                     "where": f"{locations[group.location_id].name} / {group.name}" if group else None,
                     "planned_in_debt_currency": convert(line.planned, line.currency_code, debt.currency_code,
                                                         m.fx_rate_ntd_kes),
+                    "actual_in_debt_currency": paid,
                 })
 
     linkable = []
@@ -108,7 +109,10 @@ def debts_view(db: Session, month_id: int | None) -> dict:
             months_left = 0
         elif pace > 0 and chosen is not None:
             months_left = math.ceil(balance / pace)
-            index = chosen.year * 12 + (chosen.month - 1) + months_left - 1
+            # this month's repayment is already in the balance once made, so the count starts next month
+            paid_now = sum((l["actual_in_debt_currency"] for l in this_month[d.id]), ZERO)
+            start_next = 1 if planned > 0 and paid_now >= planned else 0
+            index = chosen.year * 12 + (chosen.month - 1) + months_left - 1 + start_next
             clear_by = date(index // 12, index % 12 + 1, 1)
         entries = [{"when": e.entry_date.isoformat(), "sort": (e.entry_date.year, e.entry_date.month, e.entry_date.day),
                     "what": (e.note or ("Borrowed" if e.kind == "borrowed" else "Repaid")),
@@ -130,7 +134,9 @@ def debts_view(db: Session, month_id: int | None) -> dict:
     total_kes = sum((convert(v, code, "KES", rate) for code, v in totals.items()), ZERO)
     return jsonify({
         "month": {"id": chosen.id, "label": f"{MONTHS[chosen.month]} {chosen.year}"} if chosen else None,
-        "debts": rows, "totals": totals, "total_kes": total_kes, "linkable_lines": linkable,
+        "debts": rows, "totals": totals, "total_kes": total_kes,
+        "total_ntd": sum((convert(v, code, "NTD", rate) for code, v in totals.items()), ZERO),
+        "linkable_lines": linkable,
     })
 
 

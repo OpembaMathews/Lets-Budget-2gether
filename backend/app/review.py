@@ -291,12 +291,16 @@ def history(db: Session = Depends(get_db)):
             "income_kes": f["income"]["KES"], "income": f["income"]["native"],
             "budget_kes": f["budget"]["KES"], "actual_kes": f["actual"]["KES"],
             "saved_kes": f["saved"]["KES"], "free_kes": f["free"]["KES"], "sent_kes": f["sent_kes"],
+            # the same figures in NTD, each month at its own rate
+            "income_ntd": f["income"]["NTD"], "budget_ntd": f["budget"]["NTD"], "actual_ntd": f["actual"]["NTD"],
+            "saved_ntd": f["saved"]["NTD"], "sent_ntd": convert(f["sent_kes"], "KES", "NTD", m.fx_rate_ntd_kes),
         }
         rows.append(row)
-        y = years.setdefault(m.year, {"year": m.year, "months": 0, "income_kes": ZERO, "budget_kes": ZERO,
-                                      "actual_kes": ZERO, "saved_kes": ZERO, "sent_kes": ZERO})
+        keys = ("income_kes", "budget_kes", "actual_kes", "saved_kes", "sent_kes",
+                "income_ntd", "budget_ntd", "actual_ntd", "saved_ntd", "sent_ntd")
+        y = years.setdefault(m.year, {"year": m.year, "months": 0, **{key: ZERO for key in keys}})
         y["months"] += 1
-        for key in ("income_kes", "budget_kes", "actual_kes", "saved_kes", "sent_kes"):
+        for key in keys:
             y[key] += Decimal(row[key])
     return jsonify({"months": rows, "years": list(years.values())})
 

@@ -171,7 +171,8 @@ def test_core_saving_is_taken_once_and_later_payments_reach_kenya(api):
     summary = view(api)["summary"]
     assert summary["core"]["covered"] == summary["core"]["planned"] == "6000.00"
     assert summary["arrived"]["native"] == {"NTD": "28000.00"}
-    assert summary["savings_reserved"]["NTD"] == "7100.00"      # 1,500 + 2,400 + 3,200
+    # 1,500 core + 2,400 + 3,200 from the saving rules + 750 for the KES 3,000 chama saving line
+    assert summary["savings_reserved"]["NTD"] == "7850.00"
     # all essentials are funded once both reliable payments are in
     assert summary["essentials_left"]["KES"] == "0.00"
     assert summary["essential"]["covered"]["KES"] == summary["essential"]["planned"]["KES"]

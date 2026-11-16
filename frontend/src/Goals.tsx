@@ -47,6 +47,8 @@ export default function Goals(props: { month: MonthSummary; meta: Meta; onError:
   if (query.isLoading) return <p className="text-slate-500">Loading projects…</p>
   if (!query.data) return <p className="text-red-700">Could not load your projects.</p>
   const view = query.data
+  // The summary cards lead with NTD, at the chosen month's rate.
+  const rate = Number(view.month?.rate ?? 1) || 1
   const open = view.goals.filter((g) => !CLOSED.includes(g.status))
   const closed = view.goals.filter((g) => CLOSED.includes(g.status))
 
@@ -66,17 +68,21 @@ export default function Goals(props: { month: MonthSummary; meta: Meta; onError:
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl bg-brand-800 p-4 text-white shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-300">Still needed</p>
-          <p className="num mt-1 text-2xl font-bold">{money(view.needed_kes, 'KES')}</p>
+          <p className="num mt-1 text-2xl font-bold">{money(Number(view.needed_kes) / rate, 'NTD')}</p>
+          <p className="num text-sm text-brand-100">≈ {money(view.needed_kes, 'KES')}</p>
           <p className="text-sm text-brand-100">
             across {view.open_count} open project{view.open_count === 1 ? '' : 's'} and goals
           </p>
         </div>
         <Card className="p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">In {view.month?.label} plan</p>
-          <p className="num mt-1 text-2xl font-bold text-brand-900">{money(view.this_month_kes, 'KES')}</p>
+          <p className="num mt-1 text-2xl font-bold text-brand-900">{money(Number(view.this_month_kes) / rate, 'NTD')}</p>
+          <p className="num text-sm text-slate-500">≈ {money(view.this_month_kes, 'KES')}</p>
           <p className="text-sm text-slate-500">from plan lines linked to a project</p>
           {Number(view.savings_shared_kes) > 0 && (
-            <p className="num mt-1 text-sm text-leaf-dark">+ {money(view.savings_shared_kes, 'KES')} from extra savings</p>
+            <p className="num mt-1 text-sm text-leaf-dark">
+              + {money(Number(view.savings_shared_kes) / rate, 'NTD')} from extra savings
+            </p>
           )}
           {Object.entries(view.savings_unshared).map(([code, v]) => (
             <p key={code} className="num text-xs text-slate-500">

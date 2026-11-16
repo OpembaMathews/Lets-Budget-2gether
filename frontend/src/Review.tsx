@@ -17,7 +17,8 @@ export default function Review(props: { month: MonthSummary; onError: (m: string
   const r = query.data
   const closed = r.status === 'closed'
   const f = r.figures
-  const diff = Number(f.actual.KES) - Number(f.budget.KES)
+  // Every card leads with NTD; KES is the smaller figure under it.
+  const diff = Number(f.actual.NTD) - Number(f.budget.NTD)
 
   return (
     <div className="space-y-6">
@@ -44,29 +45,29 @@ export default function Review(props: { month: MonthSummary; onError: (m: string
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Figure title="Income received" main={Object.entries(f.income.native).map(([c, v]) => money(v, c)).join(' + ') || '–'} sub={`≈ ${money(f.income.KES, 'KES')}`} dark />
+        <Figure title="Income received" main={Object.keys(f.income.native).length ? money(f.income.NTD, 'NTD') : '–'} sub={`≈ ${money(f.income.KES, 'KES')}`} dark />
         <Figure
           title="Spent and sent (actual)"
-          main={money(f.actual.KES, 'KES')}
-          sub={`of ${money(f.budget.KES, 'KES')} budget · ${diff > 0 ? `${fmt(diff)} over` : `${fmt(-diff)} under`}`}
+          main={money(f.actual.NTD, 'NTD')}
+          sub={`of ${money(f.budget.NTD, 'NTD')} budget · ${diff > 0 ? `${fmt(diff)} over` : `${fmt(-diff)} under`}`}
           warn={diff > 0}
         />
-        <Figure title="Saved" main={money(f.saved.KES, 'KES')} sub="Extra savings and projects from income" />
-        <Figure title="Free to spend" main={money(f.free.KES, 'KES')} sub={`Sent home: ${money(f.sent_kes, 'KES')}`} />
+        <Figure title="Saved" main={money(f.saved.NTD, 'NTD')} sub={`≈ ${money(f.saved.KES, 'KES')} · savings and projects from income`} />
+        <Figure title="Free to spend" main={money(f.free.NTD, 'NTD')} sub={`Sent home: ${money(f.sent_kes, 'KES')}`} />
       </div>
 
       <Card className="p-4">
         <h2 className="mb-3 font-semibold text-brand-900">Budget against actual by location</h2>
         <div className="space-y-3">
           {Object.entries(f.locations).map(([name, l]) => {
-            const b = Number(l.budget.KES)
-            const a = Number(l.actual.KES)
+            const b = Number(l.budget.NTD)
+            const a = Number(l.actual.NTD)
             return (
               <div key={name}>
                 <div className="flex items-baseline justify-between text-sm">
                   <span className="font-semibold">{name}</span>
                   <span className={'num ' + (a > b ? 'font-semibold text-red-700' : 'text-slate-600')}>
-                    {fmt(a)} of {money(b, 'KES')}
+                    {fmt(a)} of {money(b, 'NTD')}
                   </span>
                 </div>
                 <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
