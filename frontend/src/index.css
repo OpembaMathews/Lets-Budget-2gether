@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+/* Tell Tailwind exactly where the screens are, so it does not rely on auto-detection. */
+@source "./**/*.{ts,tsx}";
+@source "../index.html";
+
+/* Dark green palette in the style of Co-operative Bank of Kenya (approximate shades). */
+@theme {
+  --color-brand-950: #01271a;
+  --color-brand-900: #023624;
+  --color-brand-800: #04472f;
+  --color-brand-700: #06593b;
+  --color-brand-600: #0a734c;
+  --color-brand-500: #1a9463;
+  --color-brand-300: #8fcdb0;
+  --color-brand-100: #dcefe5;
+  --color-brand-50: #eff7f3;
+  --color-leaf: #8cc63f;
+  --color-leaf-dark: #5f8f1f;
+  --color-paper: #f4f6f3;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: #1c2a23;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers line up in columns */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

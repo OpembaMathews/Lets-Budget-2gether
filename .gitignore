@@ -1,0 +1,38 @@
+# ---- Personal data: never upload ---------------------------------------------
+# Spreadsheets with real figures
+*.xlsx
+*.xls
+*.csv
+# The app's database, backups and any copy of it
+backend/data/
+*.db
+*.db-journal
+*.sqlite
+# Personal planning notes, kept on this computer only
+CLAUDE.md
+PROGRESS.md
+docs/
+# Local tool settings (contain paths on this computer)
+.claude/
+
+# ---- Secrets ----------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---- Python -----------------------------------------------------------------
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# ---- Node -------------------------------------------------------------------
+node_modules/
+frontend/dist/
+
+# ---- Editors and system files ------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
