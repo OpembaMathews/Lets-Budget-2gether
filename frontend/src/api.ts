@@ -520,6 +520,8 @@ export interface MonthDetail extends MonthSummary {
 export interface SignedInUser {
   username: string
   is_admin: boolean
+  /** False for an account from before recovery codes: it can make one in Settings. */
+  has_recovery_code: boolean
 }
 
 /** Someone who can sign in to the app (not a bank account). */
@@ -646,7 +648,12 @@ export const api = {
   authStatus: () =>
     request<{ set_up: boolean; signed_in: boolean; min_length: number; user: SignedInUser | null }>('GET', '/auth/status'),
   authSignup: (username: string, password: string, remember: boolean) =>
-    request<{ signed_in: boolean }>('POST', '/auth/signup', { username, password, remember }),
+    request<{ signed_in: boolean; recovery_code: string }>('POST', '/auth/signup', { username, password, remember }),
+  /** Forgotten password: the recovery code sets a new one, signs in, and is replaced by the code returned. */
+  resetPassword: (username: string, code: string, next: string) =>
+    request<{ signed_in: boolean; recovery_code: string }>('POST', '/auth/reset-password', { username, code, new: next }),
+  /** A new recovery code for the signed-in person; the old one stops working. */
+  makeRecoveryCode: (password: string) => request<{ recovery_code: string }>('POST', '/auth/recovery-code', { password }),
   authLogin: (username: string, password: string, remember: boolean) =>
     request<{ signed_in: boolean }>('POST', '/auth/login', { username, password, remember }),
   authLogout: () => request<{ signed_in: boolean }>('POST', '/auth/logout', {}),
@@ -697,8 +704,16 @@ const wholeFormat = new Intl.NumberFormat('en-KE', { maximumFractionDigits: 0 })
 const centsFormat = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /** "47950.00" -> "47,950", "27107.2" -> "27,107.20" */
+// Amounts can be hidden, for when other people can see the screen.
+let amountsHidden = false
+
+export function setAmountsHidden(hidden: boolean): void {
+  amountsHidden = hidden
+}
+
 export function fmt(amount: Money | number | null | undefined): string {
   if (amount === null || amount === undefined || amount === '') return '–'
+  if (amountsHidden) return '••••'
   const n = Math.round(Number(amount) * 100) / 100
   return Number.isInteger(n) ? wholeFormat.format(n) : centsFormat.format(n)
 }

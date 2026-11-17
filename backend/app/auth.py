@@ -7,6 +7,9 @@
 - Every data route depends on require_login, and get_db opens the signed-in
   person's own database, so nothing is returned without a valid session.
 - After 5 wrong passwords in a row for a username, sign-in to it is paused for 60 seconds.
+- Forgotten password: each account has a recovery code, shown once when it is made and
+  stored only as a hash. The username, the code and a new password open the account again.
+  Wrong codes count toward the same pause as wrong passwords.
 - The owner (super admin) can see the accounts, give one a new password, or remove it.
 - Forgotten owner password: run `python -m app.reset_password` from backend/ on this computer.
 """
@@ -38,6 +41,7 @@ MIN_LENGTH = 6
 MAX_ACCOUNTS = 100                # the app is reachable from the internet; keep sign-ups bounded
 USERNAME = re.compile(r"[a-z0-9][a-z0-9._-]{2,29}")
 USERNAME_RULE = "A username is 3 to 30 letters, numbers, dots, dashes or underscores."
+RECOVERY_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # none that look alike: no 0 O 1 I L
 
 # username -> {"count": wrong passwords in a row, "until": paused until (monotonic seconds)}
 _fails: dict[str, dict] = {}
@@ -58,6 +62,23 @@ def check_password(password: str, stored: str) -> bool:
         return False
     digest = hashlib.scrypt(password.encode(), salt=bytes.fromhex(salt_hex), n=2**14, r=8, p=1, dklen=32)
     return hmac.compare_digest(digest.hex(), digest_hex)
+
+
+def new_recovery_code() -> str:
+    """A random code such as 'K7QM-2XHD-9RWT-PB4N' (about 79 bits)."""
+    raw = "".join(secrets.choice(RECOVERY_LETTERS) for _ in range(16))
+    return "-".join(raw[i:i + 4] for i in range(0, 16, 4))
+
+
+def _plain_code(raw: str) -> str:
+    """A typed code without its dashes and spaces, in capitals."""
+    return re.sub(r"[^A-Z0-9]", "", raw.upper())
+
+
+def _give_recovery_code(user: User) -> str:
+    code = new_recovery_code()
+    user.recovery_hash = hash_password(_plain_code(code))
+    return code
 
 
 def clean_username(raw: str) -> str:
@@ -144,6 +165,12 @@ class DeleteMeIn(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class ResetIn(BaseModel):
+    username: str = Field(min_length=1, max_length=60)
+    code: str = Field(min_length=1, max_length=60)
+    new: str = Field(min_length=MIN_LENGTH, max_length=200)
+
+
 class NewPasswordIn(BaseModel):
     new: str = Field(min_length=MIN_LENGTH, max_length=200)
 
@@ -155,7 +182,8 @@ def status(request: Request, adb: Session = Depends(get_accounts_db)):
         "set_up": adb.scalars(select(User)).first() is not None,  # does any account exist yet
         "signed_in": user is not None,
         "min_length": MIN_LENGTH,
-        "user": {"username": user.username, "is_admin": user.is_admin} if user is not None else None,
+        "user": {"username": user.username, "is_admin": user.is_admin,
+                 "has_recovery_code": user.recovery_hash is not None} if user is not None else None,
     }
 
 
@@ -172,13 +200,13 @@ def signup(body: SignupIn, response: Response, adb: Session = Depends(get_accoun
     except IntegrityError:  # two sign-ups for the same name at the same moment
         adb.rollback()
         raise HTTPException(409, "That username is taken. Choose another, or sign in.")
+    code = _give_recovery_code(user)
     _start_session(adb, response, user, body.remember)
-    return {"signed_in": True}
+    return {"signed_in": True, "recovery_code": code}  # the only time the code is shown
 
 
-@router.post("/login")
-def login(body: LoginIn, response: Response, adb: Session = Depends(get_accounts_db)):
-    username = body.username.strip().lower()[:60]
+def _tries(username: str) -> dict:
+    """The wrong tries in a row for a username. Refuses while sign-in to it is paused."""
     now = time.monotonic()
     for name in [n for n, f in _fails.items() if f["count"] == 0 and f["until"] < now]:
         del _fails[name]  # forget pauses that have run out
@@ -187,18 +215,60 @@ def login(body: LoginIn, response: Response, adb: Session = Depends(get_accounts
     fails = _fails.setdefault(username, {"count": 0, "until": 0.0})
     if now < fails["until"]:
         wait = int(fails["until"] - now) + 1
-        raise HTTPException(429, f"Too many wrong passwords. Try again in {wait} seconds.")
+        raise HTTPException(429, f"Too many wrong tries. Try again in {wait} seconds.")
+    return fails
+
+
+def _wrong_try(fails: dict, message: str) -> None:
+    """Count one wrong password or recovery code, and refuse."""
+    fails["count"] += 1
+    if fails["count"] >= MAX_FAILS:
+        fails["count"] = 0
+        fails["until"] = time.monotonic() + PAUSE_SECONDS
+        raise HTTPException(429, f"Too many wrong tries. Try again in {PAUSE_SECONDS} seconds.")
+    raise HTTPException(401, message)
+
+
+@router.post("/login")
+def login(body: LoginIn, response: Response, adb: Session = Depends(get_accounts_db)):
+    username = body.username.strip().lower()[:60]
+    fails = _tries(username)
     user = adb.scalars(select(User).where(User.username == username)).first()
     if user is None or not check_password(body.password, user.password_hash):
-        fails["count"] += 1
-        if fails["count"] >= MAX_FAILS:
-            fails["count"] = 0
-            fails["until"] = now + PAUSE_SECONDS
-            raise HTTPException(429, f"Too many wrong passwords. Try again in {PAUSE_SECONDS} seconds.")
-        raise HTTPException(401, "That username or password is not right")
+        _wrong_try(fails, "That username or password is not right")
     del _fails[username]
     _start_session(adb, response, user, body.remember)
     return {"signed_in": True}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetIn, response: Response, adb: Session = Depends(get_accounts_db)):
+    """Forgotten password: the recovery code sets a new one and signs in. Other browsers are signed out."""
+    username = body.username.strip().lower()[:60]
+    fails = _tries(username)
+    user = adb.scalars(select(User).where(User.username == username)).first()
+    if user is None or user.recovery_hash is None or not check_password(_plain_code(body.code), user.recovery_hash):
+        _wrong_try(fails, "That username or recovery code is not right")
+    del _fails[username]
+    user.password_hash = hash_password(body.new)
+    code = _give_recovery_code(user)  # a code works once
+    adb.execute(delete(UserSession).where(UserSession.user_id == user.id))
+    adb.flush()
+    _start_session(adb, response, user, remember=True)
+    return {"signed_in": True, "recovery_code": code}
+
+
+@router.post("/recovery-code")
+def make_recovery_code(body: DeleteMeIn, request: Request, adb: Session = Depends(get_accounts_db)):
+    """Make a new recovery code for the signed-in person. The old one stops working."""
+    user = current_user(request, adb)
+    if user is None:
+        raise HTTPException(401, "Please sign in")
+    if not check_password(body.password, user.password_hash):
+        raise HTTPException(401, "That password is not right")
+    code = _give_recovery_code(user)
+    adb.commit()
+    return {"recovery_code": code}
 
 
 @router.post("/logout")

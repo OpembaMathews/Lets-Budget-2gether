@@ -51,7 +51,9 @@ If you used the app before accounts existed, your budget and password are kept: 
 
 ### Forgot the password?
 
-The owner can give anyone a new password under Settings → People using this app. For the owner's own password, from the `backend` folder:
+Every account has a **recovery code**, shown once when the account is created. On the sign-in page, **Forgot your password?** asks for the username and that code, and lets you choose a new password; you then get a new code, because a code works once. A lost code can be replaced under Settings → Recovery code while you are signed in.
+
+Without a code, the owner can give anyone a new password under Settings → People using this app. For the owner's own password, from the `backend` folder:
 
 ```bash
 .venv/Scripts/python -m app.reset_password              # the owner

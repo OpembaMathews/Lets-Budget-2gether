@@ -36,6 +36,8 @@ class User(AccountsBase):
     # Always stored in lower case.
     username: Mapped[str] = mapped_column(String(30), unique=True)
     password_hash: Mapped[str] = mapped_column(String(200))
+    # Hash of the recovery code that sets a new password when this one is forgotten. None: no code yet.
+    recovery_hash: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     # File name of this person's budget database, inside the data folder.
     db_file: Mapped[str] = mapped_column(String(80))
@@ -60,6 +62,10 @@ def accounts_session() -> Session:
     engine = engine_for(path)
     if path not in _ready:
         AccountsBase.metadata.create_all(engine)
+        with engine.begin() as conn:  # an accounts file from before recovery codes existed
+            columns = {row[1] for row in conn.execute(text('PRAGMA table_info("user")'))}
+            if "recovery_hash" not in columns:
+                conn.execute(text('ALTER TABLE "user" ADD COLUMN recovery_hash VARCHAR(200)'))
         _ready.add(path)
     return Session(engine, autoflush=False, expire_on_commit=False)
 

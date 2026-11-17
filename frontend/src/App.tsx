@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { api, applyProfile, ccy, MONTH_NAMES, monthLabel, places } from './api'
+import { api, applyProfile, ccy, MONTH_NAMES, monthLabel, places, setAmountsHidden } from './api'
 import type { MonthSummary, SignedInUser } from './api'
 import Dashboard from './Dashboard'
 import Debts from './Debts'
@@ -75,6 +75,14 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
   const [creating, setCreating] = useState(false)
   // On a phone the list of screens is folded away behind a Menu button.
   const [menuOpen, setMenuOpen] = useState(false)
+  // Amounts can be hidden when other people can see the screen. The choice is remembered on this device.
+  const [hidden, setHidden] = useState(() => localStorage.getItem('hide-amounts') === '1')
+  setAmountsHidden(hidden)
+  useEffect(() => {
+    document.documentElement.classList.toggle('hide-amounts', hidden)
+    localStorage.setItem('hide-amounts', hidden ? '1' : '0')
+    return () => document.documentElement.classList.remove('hide-amounts')
+  }, [hidden])
 
   const meta = useQuery({ queryKey: ['meta'], queryFn: api.meta })
   // Before anything is drawn: what this budget's two currencies and countries are called.
@@ -135,6 +143,19 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
               }}
             />
           ))}
+          <button
+            type="button"
+            aria-pressed={hidden}
+            title="Hide every amount on the screen, for when other people can see it"
+            onClick={() => {
+              setHidden(!hidden)
+              setMenuOpen(false)
+            }}
+            className="mt-2 flex items-center gap-2 rounded-lg border border-brand-700 px-3 py-3 text-left text-sm font-semibold text-brand-100 transition hover:bg-brand-800 lg:py-2"
+          >
+            <EyeIcon crossed={!hidden} />
+            {hidden ? 'Show amounts' : 'Hide amounts'}
+          </button>
           <button
             type="button"
             onClick={() => void props.onSignOut()}
@@ -211,6 +232,17 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
         />
       )}
     </div>
+  )
+}
+
+/** An eye, crossed out for "hide". */
+function EyeIcon(props: { crossed: boolean }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+      {props.crossed && <path d="M4 4l16 16" />}
+    </svg>
   )
 }
 

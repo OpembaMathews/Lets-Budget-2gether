@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, ccy, places } from './api'
 import type { AppAccount, Location, Meta, Recipient, SignedInUser, Source, SplitOrder } from './api'
+import { RecoveryCode } from './Login'
 import { Button, Card, EditBox, Select } from './ui'
 
 const ACCOUNT_KINDS = [
@@ -57,6 +58,8 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
       <SplitOrderCard run={run} />
 
       <PasswordCard />
+
+      <RecoveryCard has={props.user.has_recovery_code} />
 
       {props.user.is_admin && <PeopleCard me={props.user} />}
 
@@ -656,6 +659,56 @@ function DeleteAccountCard(props: { username: string }) {
           {busy ? 'Deleting…' : 'Delete my account'}
         </Button>
       </form>
+      {problem && <p className="mt-2 text-sm text-red-700">{problem}</p>}
+    </Card>
+  )
+}
+
+function RecoveryCard(props: { has: boolean }) {
+  const qc = useQueryClient()
+  const [password, setPassword] = useState('')
+  const [code, setCode] = useState<string | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  return (
+    <Card className="p-5">
+      <h2 className="text-lg font-bold text-brand-900">Recovery code</h2>
+      <p className="mb-3 text-sm text-slate-600">
+        If you forget your password, "Forgot your password?" on the sign-in page asks for this code and lets you set a
+        new one. {props.has || code ? 'Lost the code? Make a new one here; the old one stops working.' : <strong>You do not have a code yet. Make one now.</strong>}
+      </p>
+      {code ? (
+        <>
+          <p className="text-sm text-slate-700">Write it down or save it somewhere safe. It is shown only this once.</p>
+          <div className="max-w-sm">
+            <RecoveryCode code={code} />
+          </div>
+        </>
+      ) : (
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!password || busy) return
+            setBusy(true)
+            setProblem(null)
+            api
+              .makeRecoveryCode(password)
+              .then((made) => {
+                setCode(made.recovery_code)
+                setPassword('')
+                void qc.invalidateQueries({ queryKey: ['auth'] })
+              })
+              .catch((err: Error) => setProblem(err.message))
+              .finally(() => setBusy(false))
+          }}
+        >
+          <input aria-label="Your password, for a recovery code" type="password" autoComplete="current-password" className={box + ' w-full sm:w-56'} placeholder="Your password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Button type="submit" variant="ghost" disabled={!password || busy}>
+            {props.has ? 'Make a new recovery code' : 'Make a recovery code'}
+          </Button>
+        </form>
+      )}
       {problem && <p className="mt-2 text-sm text-red-700">{problem}</p>}
     </Card>
   )

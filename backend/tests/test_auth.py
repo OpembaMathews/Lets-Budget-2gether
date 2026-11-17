@@ -51,7 +51,7 @@ def test_sign_in_out_and_wrong_password(client, anonymous):
     cookie = ok.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie and "max-age=" in cookie
     assert anonymous.get("/api/months").status_code == 200
-    assert anonymous.get("/api/auth/status").json()["user"] == {"username": "tester", "is_admin": True}
+    assert anonymous.get("/api/auth/status").json()["user"] == {"username": "tester", "is_admin": True, "has_recovery_code": False}
     anonymous.post("/api/auth/logout")
     assert anonymous.get("/api/months").status_code == 401
 
@@ -104,8 +104,8 @@ def test_sign_up_rules(real_files):
 
 def test_each_account_has_its_own_sample_data(real_files):
     amina, brian = _signed_up("amina"), _signed_up("brian")
-    assert amina.get("/api/auth/status").json()["user"] == {"username": "amina", "is_admin": True}   # the first is the owner
-    assert brian.get("/api/auth/status").json()["user"] == {"username": "brian", "is_admin": False}
+    assert amina.get("/api/auth/status").json()["user"] == {"username": "amina", "is_admin": True, "has_recovery_code": True}   # the first is the owner
+    assert brian.get("/api/auth/status").json()["user"] == {"username": "brian", "is_admin": False, "has_recovery_code": True}
 
     # both start from the same sample plan, projects and income sources
     assert len(brian.get("/api/months").json()) == 1
@@ -187,7 +187,7 @@ def test_budget_from_before_accounts_goes_to_the_owner(real_files):
 
     owner = TestClient(app)
     assert owner.post("/api/auth/login", json={"username": "admin", "password": "old-password"}).status_code == 200
-    assert owner.get("/api/auth/status").json()["user"] == {"username": "admin", "is_admin": True}
+    assert owner.get("/api/auth/status").json()["user"] == {"username": "admin", "is_admin": True, "has_recovery_code": False}
     assert [r["name"] for r in owner.get("/api/recipients").json()] == ["My real landlord"]
     assert [a["username"] for a in owner.get("/api/admin/accounts").json()] == ["admin"]
 
@@ -269,3 +269,44 @@ def test_someone_can_delete_their_own_account(real_files):
     assert [a["username"] for a in amina.get("/api/admin/accounts").json()] == ["amina"]
     assert amina.get("/api/months").status_code == 200                      # nobody else is touched
     _signed_up("brian")                                                     # the name is free again
+
+
+def test_a_forgotten_password_is_reset_with_the_recovery_code(real_files):
+    amina = TestClient(app)
+    code = amina.post("/api/auth/signup", json={"username": "amina", "password": "a-password"}).json()["recovery_code"]
+    assert amina.get("/api/auth/status").json()["user"]["has_recovery_code"] is True
+    other = TestClient(app)
+    assert other.post("/api/auth/login", json={"username": "amina", "password": "a-password"}).status_code == 200
+
+    visitor = TestClient(app)
+    reset = lambda **changes: visitor.post(  # noqa: E731
+        "/api/auth/reset-password", json={"username": "amina", "code": code, "new": "new-password", **changes})
+    assert reset(code="AAAA-BBBB-CCCC-DDDD").status_code == 401
+    assert reset(username="nobody").status_code == 401
+    assert reset(new="short").status_code == 422
+    done = reset(code=f"  {code.lower().replace('-', ' ')} ")               # typed loosely is fine
+    assert done.status_code == 200
+    assert visitor.get("/api/months").status_code == 200                    # signed in
+    assert other.get("/api/months").status_code == 401                      # everyone else is signed out
+    assert TestClient(app).post("/api/auth/login", json={"username": "amina", "password": "a-password"}).status_code == 401
+    assert TestClient(app).post("/api/auth/login", json={"username": "amina", "password": "new-password"}).status_code == 200
+
+    # a code works once; the reset hands out the next one
+    assert reset(new="third-password").status_code == 401
+    assert reset(code=done.json()["recovery_code"], new="third-password").status_code == 200
+
+    # a new code can be made in Settings, with the password; the one before stops working
+    assert visitor.post("/api/auth/recovery-code", json={"password": "wrong"}).status_code == 401
+    fresh = visitor.post("/api/auth/recovery-code", json={"password": "third-password"}).json()["recovery_code"]
+    assert reset(code=fresh, new="fourth-password").status_code == 200
+    assert TestClient(app).post("/api/auth/recovery-code", json={"password": "x"}).status_code == 401
+
+
+def test_wrong_recovery_codes_pause_like_wrong_passwords(real_files):
+    code = TestClient(app).post("/api/auth/signup", json={"username": "amina", "password": "a-password"}).json()["recovery_code"]
+    visitor = TestClient(app)
+    guess = {"username": "amina", "code": "AAAA-BBBB-CCCC-DDDD", "new": "new-password"}
+    for _ in range(4):
+        assert visitor.post("/api/auth/reset-password", json=guess).status_code == 401
+    assert visitor.post("/api/auth/reset-password", json=guess).status_code == 429
+    assert visitor.post("/api/auth/reset-password", json={**guess, "code": code}).status_code == 429

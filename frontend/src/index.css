@@ -48,6 +48,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* "Hide amounts": written amounts become dots (see fmt in api.ts); amounts in boxes are blurred until you click in. */
+.hide-amounts input[inputmode='decimal']:not(:focus) {
+  color: transparent;
+  text-shadow: 0 0 10px #334155;
+}
+.hide-amounts input[inputmode='decimal']:not(:focus)::placeholder {
+  text-shadow: none;
+}
+
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
