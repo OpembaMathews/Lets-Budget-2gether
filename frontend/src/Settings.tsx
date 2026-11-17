@@ -130,6 +130,17 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
           ))}
         </div>
       </Card>
+
+      <Card className="p-5">
+        <h2 className="text-lg font-bold text-brand-900">Set-up guide</h2>
+        <p className="mb-3 text-sm text-slate-600">
+          The step-by-step guide a new account starts with: income, spending, savings, projects, debts and accounts.
+          It works on your current figures and changes nothing until you do.
+        </p>
+        <Button variant="ghost" onClick={() => void run(() => api.setSetup(true))}>
+          Open the set-up guide
+        </Button>
+      </Card>
     </div>
   )
 }

@@ -49,7 +49,8 @@ class SourcePatch(BaseModel):
 
 class ExpectedIn(BaseModel):
     source_id: int
-    amount: Decimal = Field(ge=0)
+    # Left out, the amount stays as it is and only the day changes.
+    amount: Decimal | None = Field(default=None, ge=0)
     expected_day: int | None = Field(default=None, ge=1, le=31)
 
 
@@ -180,9 +181,10 @@ def set_expected(month_id: int, body: ExpectedIn, db: Session = Depends(get_db))
     _source(db, body.source_id)
     row = next((e for e in month.expected if e.source_id == body.source_id), None)
     if row is None:
-        row = ExpectedIncome(month_id=month.id, source_id=body.source_id)
+        row = ExpectedIncome(month_id=month.id, source_id=body.source_id, amount=Decimal("0"))
         db.add(row)
-    row.amount = body.amount
+    if body.amount is not None:
+        row.amount = body.amount
     if "expected_day" in body.model_fields_set:
         row.expected_day = body.expected_day
     db.commit()
@@ -371,3 +373,25 @@ def set_split_order(body: SplitOrderIn, db: Session = Depends(get_db)):
             resplit_month(month)
     db.commit()
     return {"order": body.order}
+
+
+class SetupIn(BaseModel):
+    pending: bool
+
+
+@router.get("/settings/setup")
+def get_setup(db: Session = Depends(get_db)):
+    """Whether this budget is still waiting for its first-time set-up."""
+    return {"pending": db.get(AppSetting, "setup_pending") is not None}
+
+
+@router.put("/settings/setup")
+def set_setup(body: SetupIn, db: Session = Depends(get_db)):
+    """Finish the set-up guide, or open it again."""
+    setting = db.get(AppSetting, "setup_pending")
+    if body.pending and setting is None:
+        db.add(AppSetting(key="setup_pending", value="1"))
+    elif not body.pending and setting is not None:
+        db.delete(setting)
+    db.commit()
+    return {"pending": body.pending}

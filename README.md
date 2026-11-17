@@ -45,7 +45,7 @@ npm run dev
 
 Open http://localhost:5173. The first time, the app asks you to create an account. The first account is the owner.
 
-Every new account gets its own database, starting clean: a short plan of common lines with **no amounts**, two income sources and no projects. Rename, add or delete anything you like. A database that already holds data is never overwritten.
+Every new account gets its own database, starting clean: a short plan of common lines with **no amounts**, two income sources and no projects. Rename, add or delete anything you like. The first time you sign in, a **set-up guide** walks you through income, spending, savings, projects, debts and accounts; it can be opened again from Settings. A database that already holds data is never overwritten.
 
 If you used the app before accounts existed, your budget and password are kept: sign in with the username `admin` and the password you already use.
 

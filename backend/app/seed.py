@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (
-    Account, BudgetLine, Currency, ExpectedIncome, Goal, GoalItem, IncomeSource, LineGroup, Location, Month,
+    Account, AppSetting, BudgetLine, Currency, ExpectedIncome, Goal, GoalItem, IncomeSource, LineGroup, Location, Month,
     Recipient, SplitRule,
 )
 
@@ -124,6 +124,8 @@ def seed_if_empty(db: Session, today: date | None = None) -> bool:
                     planned=Decimal(planned), note=note, sort_order=line_order,
                     is_core=(name == "Core saving" and kind == "saving"),
                 ))
+    # A new budget opens on the set-up guide until its owner has been through it.
+    db.add(AppSetting(key="setup_pending", value="1"))
     db.commit()
     return True
 

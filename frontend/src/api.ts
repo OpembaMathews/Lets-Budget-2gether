@@ -562,7 +562,7 @@ export const api = {
     request<void>('DELETE', `/lines/${id}` + (reason ? `?reason=${encodeURIComponent(reason)}` : '')),
 
   income: (monthId: number) => request<IncomeView>('GET', `/months/${monthId}/income`),
-  setExpected: (monthId: number, body: { source_id: number; amount: string; expected_day?: number | null }) =>
+  setExpected: (monthId: number, body: { source_id: number; amount?: string; expected_day?: number | null }) =>
     request<IncomeView>('PUT', `/months/${monthId}/expected`, body),
   activate: (monthId: number, shortfall_source?: string) =>
     request<IncomeView>('POST', `/months/${monthId}/activate`, { shortfall_source: shortfall_source ?? null }),
@@ -605,6 +605,9 @@ export const api = {
   orderGoals: (monthId: number, ids: number[]) => request<GoalsView>('PUT', `/goals/order?month_id=${monthId}`, { ids }),
   splitOrder: () => request<{ order: SplitOrder }>('GET', '/settings/split-order'),
   setSplitOrder: (order: SplitOrder) => request<{ order: SplitOrder }>('PUT', '/settings/split-order', { order }),
+  /** Whether this budget still opens on the first-time set-up guide. */
+  setup: () => request<{ pending: boolean }>('GET', '/settings/setup'),
+  setSetup: (pending: boolean) => request<{ pending: boolean }>('PUT', '/settings/setup', { pending }),
 
   review: (monthId: number) => request<ReviewView>('GET', `/months/${monthId}/review`),
   setBalance: (monthId: number, body: { account_id: number; actual_balance: string; note?: string | null }) =>

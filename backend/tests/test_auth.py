@@ -139,6 +139,11 @@ def test_a_new_account_starts_clean(real_files, monkeypatch):
     assert len(income["sources"]) == 2 and income["arrivals"] == []
     assert Decimal(income["summary"]["arrived"]["NTD"]) == 0
 
+    # it opens on the set-up guide until that is finished
+    assert amina.get("/api/settings/setup").json() == {"pending": True}
+    assert amina.put("/api/settings/setup", json={"pending": False}).json() == {"pending": False}
+    assert amina.get("/api/settings/setup").json() == {"pending": False}
+
     # every screen opens on the empty plan
     for path in ("income", "sends", "review"):
         assert amina.get(f"/api/months/{month_id}/{path}").status_code == 200, path

@@ -12,6 +12,7 @@ import MonthPlan from './MonthPlan'
 import Review from './Review'
 import Sends from './Sends'
 import Settings from './Settings'
+import Setup from './Setup'
 import { Button, ErrorBanner, Select } from './ui'
 
 type Page = 'dashboard' | 'plan' | 'income' | 'sends' | 'goals' | 'debts' | 'review' | 'history' | 'settings'
@@ -88,6 +89,12 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
     chosenMonth !== null && list.some((m) => m.id === chosenMonth) ? chosenMonth : (defaultMonth?.id ?? null)
   const offline = meta.isError || months.isError
   const month = list.find((m) => m.id === monthId)
+
+  // A new account goes through the set-up guide before it sees the app.
+  const setup = useQuery({ queryKey: ['setup'], queryFn: api.setup })
+  if (setup.isLoading) return <p className="p-6 text-slate-500">Opening…</p>
+  if (setup.data?.pending && meta.data && month)
+    return <Setup month={month} meta={meta.data} username={props.user.username} onSignOut={() => void props.onSignOut()} />
 
   return (
     <div className="flex min-h-full flex-col lg:flex-row">
