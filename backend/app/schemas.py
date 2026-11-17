@@ -88,6 +88,8 @@ class MetaOut(BaseModel):
     currencies: list[CurrencyOut]
     locations: list[LocationOut]
     accounts: list[AccountOut]
+    # the two countries and what their currencies are really called (see app/profile.py)
+    profile: dict = {}
 
 
 # ---- months and lines -------------------------------------------------------

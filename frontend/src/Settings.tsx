@@ -1,7 +1,7 @@
 // Settings: locations and their sections, accounts, currencies.
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api } from './api'
+import { api, ccy, places } from './api'
 import type { AppAccount, Location, Meta, Recipient, SignedInUser, Source, SplitOrder } from './api'
 import { Button, Card, EditBox, Select } from './ui'
 
@@ -18,7 +18,7 @@ const box =
 export default function Settings(props: { meta: Meta; user: SignedInUser; onError: (message: string | null) => void }) {
   const { meta, onError } = props
   const qc = useQueryClient()
-  const currencyOptions = meta.currencies.map((c) => ({ value: c.code, label: c.code }))
+  const currencyOptions = meta.currencies.map((c) => ({ value: c.code, label: ccy(c.code) }))
   const recipients = useQuery({ queryKey: ['recipients'], queryFn: api.recipients }).data ?? []
 
   async function run(action: () => Promise<unknown>) {
@@ -125,7 +125,7 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
         <div className="flex flex-wrap gap-2">
           {meta.currencies.map((c) => (
             <span key={c.code} className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-900">
-              <strong>{c.code}</strong> · {c.name}
+              <strong>{ccy(c.code)}</strong> · {c.code === 'NTD' ? places().residence : places().home}
             </span>
           ))}
         </div>
@@ -239,7 +239,7 @@ function IncomeSources(props: { currencyOptions: Options; run: Run }) {
                     <span className="w-24">
                       <EditBox ariaLabel="Fixed amount to save" numeric value={num(s.save_fixed)} placeholder="0" onCommit={(v) => save({ save_fixed: v })} className="border-slate-300" />
                     </span>
-                    {s.currency_code} saved from each payment
+                    {ccy(s.currency_code)} saved from each payment
                   </label>
                 )}
               </div>
@@ -425,12 +425,12 @@ function Recipients(props: { run: Run }) {
   const { run } = props
   const recipients = useQuery({ queryKey: ['recipients'], queryFn: api.recipients }).data ?? []
   const [name, setName] = useState('')
-  const [method, setMethod] = useState('M-Pesa')
+  const [method, setMethod] = useState(places().home === 'Kenya' ? 'M-Pesa' : 'Mobile money')
   return (
     <Card className="p-5">
-      <h2 className="text-lg font-bold text-brand-900">Recipients in Kenya</h2>
+      <h2 className="text-lg font-bold text-brand-900">Recipients in {places().home}</h2>
       <p className="mb-4 text-sm text-slate-600">
-        The people and payees you send money to. Each Kenya section can have a usual recipient, set above.
+        The people and payees you send money to. Each {places().home} section can have a usual recipient, set above.
       </p>
       <div className="divide-y divide-slate-100">
         {recipients.map((r) => (

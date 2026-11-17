@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money } from './api'
+import { ccy, places } from './api'
 import type { MonthSummary, ReviewView } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
@@ -120,11 +121,11 @@ function Checks(props: { review: ReviewView }) {
   if (c.ready_to_send.length)
     items.push({
       tone: 'warn',
-      title: 'Cash set aside for Kenya but not sent',
-      body: c.ready_to_send.map((l) => `${l.name} (${l.section}): KES ${fmt(l.amount)}`),
+      title: `Cash set aside for ${places().home} but not sent`,
+      body: c.ready_to_send.map((l) => `${l.name} (${l.section}): ${money(l.amount, 'KES')}`),
     })
   if (Number(c.unassigned_sends) > 0)
-    items.push({ tone: 'warn', title: `KES ${fmt(c.unassigned_sends)} sent without a purpose`, body: ['Assign it on Kenya sends.'] })
+    items.push({ tone: 'warn', title: `${money(c.unassigned_sends, 'KES')} sent without a purpose`, body: [`Assign it on ${places().home} sends.`] })
   if (c.income_not_arrived.length)
     items.push({
       tone: 'info',
@@ -177,7 +178,7 @@ function Balances(props: { review: ReviewView; run: Run; closed: boolean }) {
         {b.accounts.map((a) => (
           <div key={a.account_id} className="grid grid-cols-[minmax(0,1fr)_40px_130px] items-center sm:grid-cols-[minmax(140px,1fr)_60px_140px] gap-2 py-1.5 text-sm">
             <span className="font-medium">{a.name}</span>
-            <span className="text-xs text-slate-500">{a.currency_code}</span>
+            <span className="text-xs text-slate-500">{ccy(a.currency_code)}</span>
             <EditBox
               ariaLabel={`Balance of ${a.name}`}
               numeric
@@ -194,7 +195,7 @@ function Balances(props: { review: ReviewView; run: Run; closed: boolean }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {b.currencies.map((c) => (
             <div key={c.currency_code} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-              <p className="font-semibold text-brand-900">{c.currency_code}</p>
+              <p className="font-semibold text-brand-900">{ccy(c.currency_code)}</p>
               <p className="num text-slate-700">Your balances: {c.entered !== null ? money(c.entered, c.currency_code) : '–'}</p>
               {c.expected !== null ? (
                 <>

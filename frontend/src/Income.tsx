@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money } from './api'
+import { ccy } from './api'
 import type { Arrival, IncomeView, MonthSummary, Slice, SourceRow } from './api'
 import { monthLabel } from './api'
 import { useRun } from './hooks'
@@ -278,7 +279,7 @@ function ExpectedRow(props: { source: SourceRow; monthId: number; locked: boolea
             onCommit={(v) => run(() => api.setExpected(monthId, { source_id: s.id, amount: v }))}
             className="font-semibold text-brand-900"
           />
-          <span className="text-xs text-slate-500">{s.currency_code}</span>
+          <span className="text-xs text-slate-500">{ccy(s.currency_code)}</span>
         </div>
       </div>
       <div className="min-w-0">
@@ -356,7 +357,7 @@ function RecordPayment(props: { view: IncomeView; month: MonthSummary; run: Run;
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-semibold text-slate-700">Amount {chosen ? `(${chosen.currency_code})` : ''}</span>
+          <span className="mb-1 block font-semibold text-slate-700">Amount {chosen ? `(${ccy(chosen.currency_code)})` : ''}</span>
           <input
             aria-label="Payment amount"
             className={box + ' num w-36 text-right'}
@@ -462,7 +463,7 @@ function SplitPanel(props: { arrival: Arrival; view: IncomeView; run: Run; onClo
                     onCommit={(v) => change(s, v)}
                     className="border-slate-200 font-semibold text-brand-900"
                   />
-                  <span className="text-xs text-slate-500">{cur}</span>
+                  <span className="text-xs text-slate-500">{ccy(cur)}</span>
                 </div>
               </div>
             ))}

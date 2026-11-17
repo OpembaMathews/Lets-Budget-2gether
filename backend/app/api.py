@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 from . import schemas
 from .actuals import line_actuals
 from .auth import get_db
+from .profile import get_profile
 from .models import Account, BudgetLine, Currency, Debt, ExpectedIncome, Goal, LineGroup, Location, Month, Recipient
 from .services import (
     copy_forward,
@@ -110,6 +111,7 @@ def get_meta(db: Session = Depends(get_db)):
         "currencies": db.scalars(select(Currency).order_by(Currency.code)).all(),
         "locations": locations,
         "accounts": db.scalars(select(Account).order_by(Account.id)).all(),
+        "profile": get_profile(db),
     }
 
 

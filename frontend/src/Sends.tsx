@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money, monthLabel } from './api'
+import { ccy, places } from './api'
 import type { MonthSummary, SendBody, SendGroup, SendLine, SendRow, SendsView } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
@@ -151,7 +152,7 @@ export default function Sends(props: { month: MonthSummary; onError: (m: string 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-brand-900">Kenya sends · {monthLabel(month)}</h1>
+        <h1 className="text-2xl font-bold text-brand-900">{places().home} sends · {monthLabel(month)}</h1>
         <p className="mt-1 text-sm text-slate-600">
           Tick what you have sent, check the amounts, and mark it as sent. Each section shows what is still to go.
         </p>
@@ -159,7 +160,7 @@ export default function Sends(props: { month: MonthSummary; onError: (m: string 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4">
-          <Label>Planned for Kenya</Label>
+          <Label>Planned for {places().home}</Label>
           <Big>{money(t.planned, 'KES')}</Big>
           <Small>
             Set aside from income: {money(t.set_aside, 'KES')}
@@ -171,7 +172,7 @@ export default function Sends(props: { month: MonthSummary; onError: (m: string 
           <p className="num mt-1 text-2xl font-bold">{money(t.sent, 'KES')}</p>
           <p className="text-sm text-brand-100">
             {t.count} send{t.count === 1 ? '' : 's'}
-            {t.average_rate && ` · average 1 NTD = ${Number(t.average_rate).toFixed(2)} KES`}
+            {t.average_rate && ` · average 1 ${ccy('NTD')} = ${Number(t.average_rate).toFixed(2)} ${ccy('KES')}`}
           </p>
         </div>
         <Card className="p-4">
@@ -234,7 +235,7 @@ export default function Sends(props: { month: MonthSummary; onError: (m: string 
           />
         ))}
         {view.groups.length === 0 && (
-          <Card className="p-5 text-sm text-slate-600">This month has no KES lines, so there is nothing to send.</Card>
+          <Card className="p-5 text-sm text-slate-600">This month has no {ccy('KES')} lines, so there is nothing to send.</Card>
         )}
       </div>
 
@@ -405,7 +406,7 @@ function SendForm(props: { initial: Draft; view: SendsView; monthId: number; run
             </select>
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-semibold text-slate-700">Amount received (KES)</span>
+            <span className="mb-1 block font-semibold text-slate-700">Amount received ({ccy('KES')})</span>
             <input
               aria-label="Amount in KES"
               className={box + ' num w-36 text-right'}
@@ -417,7 +418,7 @@ function SendForm(props: { initial: Draft; view: SendsView; monthId: number; run
           </label>
           {!more && (
             <button className="pb-2 text-sm text-brand-700 underline" onClick={() => setMore(true)}>
-              + NTD cost, fee, platform
+              + {ccy('NTD')} cost, fee, platform
             </button>
           )}
         </div>
@@ -425,11 +426,11 @@ function SendForm(props: { initial: Draft; view: SendsView; monthId: number; run
         {more && (
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm">
-              <span className="mb-1 block font-semibold text-slate-700">Total cost (NTD)</span>
+              <span className="mb-1 block font-semibold text-slate-700">Total cost ({ccy('NTD')})</span>
               <input aria-label="Total cost in NTD" className={box + ' num w-28 text-right'} inputMode="decimal" value={d.amount_ntd} onChange={(e) => set({ amount_ntd: e.target.value })} />
             </label>
             <label className="text-sm">
-              <span className="mb-1 block font-semibold text-slate-700">Of which fee (NTD)</span>
+              <span className="mb-1 block font-semibold text-slate-700">Of which fee ({ccy('NTD')})</span>
               <input aria-label="Fee in NTD" className={box + ' num w-24 text-right'} inputMode="decimal" value={d.fee_ntd} onChange={(e) => set({ fee_ntd: e.target.value })} />
             </label>
             <label className="text-sm">
@@ -442,7 +443,7 @@ function SendForm(props: { initial: Draft; view: SendsView; monthId: number; run
             </label>
             {Number(d.amount_ntd) > 0 && amount > 0 && (
               <p className="pb-2 text-sm text-slate-600">
-                Rate: 1 NTD = <strong className="num">{(amount / Number(d.amount_ntd)).toFixed(2)}</strong> KES
+                Rate: 1 {ccy('NTD')} = <strong className="num">{(amount / Number(d.amount_ntd)).toFixed(2)}</strong> {ccy('KES')}
                 <span className="text-slate-400"> (plan {Number(view.planning_rate).toFixed(2)})</span>
               </p>
             )}
@@ -487,7 +488,7 @@ function SendForm(props: { initial: Draft; view: SendsView; monthId: number; run
                   aria-label="Purpose amount"
                   className={box + ' num w-32 text-right'}
                   inputMode="decimal"
-                  placeholder="KES"
+                  placeholder={ccy('KES')}
                   value={p.amount}
                   onChange={(e) => set({ purposes: d.purposes.map((o) => (o.key === p.key ? { ...o, amount: e.target.value } : o)) })}
                 />
@@ -701,7 +702,7 @@ function SendLog(props: { view: SendsView; locked: boolean; run: Run; onEdit: (s
                     {s.platform && ` · ${s.platform}`}
                     {s.amount_ntd && ` · cost ${money(s.amount_ntd, 'NTD')}`}
                     {s.fee_ntd && Number(s.fee_ntd) > 0 && ` (fee ${fmt(s.fee_ntd)})`}
-                    {s.rate && ` · 1 NTD = ${Number(s.rate).toFixed(2)} KES`}
+                    {s.rate && ` · 1 ${ccy('NTD')} = ${Number(s.rate).toFixed(2)} ${ccy('KES')}`}
                     {s.reference && ` · ref ${s.reference}`}
                   </p>
                 </div>
@@ -714,7 +715,7 @@ function SendLog(props: { view: SendsView; locked: boolean; run: Run; onEdit: (s
                       title="Remove this send"
                       className="rounded-md px-1.5 py-1 text-slate-400 hover:bg-red-50 hover:text-red-700"
                       onClick={() => {
-                        if (window.confirm(`Remove this send of KES ${fmt(s.amount_kes)} to ${s.recipient_name}?`))
+                        if (window.confirm(`Remove this send of ${money(s.amount_kes, 'KES')} to ${s.recipient_name}?`))
                           void run(() => api.deleteSend(s.id))
                       }}
                     >

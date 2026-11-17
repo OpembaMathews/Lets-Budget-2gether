@@ -31,7 +31,16 @@ export interface Account {
   active: boolean
 }
 
+/** The two countries this budget is about, and what their currencies are really called. */
+export interface Profile {
+  residence_country: string
+  residence_currency: string
+  home_country: string
+  home_currency: string
+}
+
 export interface Meta {
+  profile: Profile
   currencies: Currency[]
   locations: Location[]
   accounts: Account[]
@@ -538,7 +547,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     } catch {
       // keep the generic message
     }
-    throw new Error(message)
+    // Messages name the two currencies by their stored codes; show the names this budget uses.
+    throw new Error(message.replace(/\b(NTD|KES)\b/g, (code) => ccy(code)))
   }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
@@ -608,6 +618,9 @@ export const api = {
   /** Whether this budget still opens on the first-time set-up guide. */
   setup: () => request<{ pending: boolean }>('GET', '/settings/setup'),
   setSetup: (pending: boolean) => request<{ pending: boolean }>('PUT', '/settings/setup', { pending }),
+  setProfile: (body: Profile) => request<Profile>('PUT', '/settings/profile', body),
+  /** Today's market rate between the two currencies. Fails when it cannot be fetched. */
+  fxRate: () => request<{ base: string; quote: string; rate: string; as_of: string | null; source: string | null }>('GET', '/fx-rate'),
 
   review: (monthId: number) => request<ReviewView>('GET', `/months/${monthId}/review`),
   setBalance: (monthId: number, body: { account_id: number; actual_balance: string; note?: string | null }) =>
@@ -687,9 +700,27 @@ export function fmt(amount: Money | number | null | undefined): string {
   return Number.isInteger(n) ? wholeFormat.format(n) : centsFormat.format(n)
 }
 
+// Amounts are stored under two fixed codes: NTD for the currency where you live and KES for the currency at home.
+// The profile says what the two are really called, and every screen shows those names.
+let profile: Profile = { residence_country: 'Taiwan', residence_currency: 'NTD', home_country: 'Kenya', home_currency: 'KES' }
+
+export function applyProfile(next: Profile | undefined): void {
+  if (next) profile = next
+}
+
+/** The name to show for a stored currency code. */
+export function ccy(code: string): string {
+  return code === 'NTD' ? profile.residence_currency : code === 'KES' ? profile.home_currency : code
+}
+
+/** The two countries: where you live, and home. */
+export function places(): { residence: string; home: string } {
+  return { residence: profile.residence_country, home: profile.home_country }
+}
+
 /** "KES 47,950" */
 export function money(amount: Money | number | null | undefined, currency: string): string {
-  return `${currency} ${fmt(amount)}`
+  return `${ccy(currency)} ${fmt(amount)}`
 }
 
 export function otherCurrency(code: string): string {

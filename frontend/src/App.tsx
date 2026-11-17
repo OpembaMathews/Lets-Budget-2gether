@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { api, MONTH_NAMES, monthLabel } from './api'
+import { api, applyProfile, ccy, MONTH_NAMES, monthLabel, places } from './api'
 import type { MonthSummary, SignedInUser } from './api'
 import Dashboard from './Dashboard'
 import Debts from './Debts'
@@ -77,6 +77,9 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
   const [menuOpen, setMenuOpen] = useState(false)
 
   const meta = useQuery({ queryKey: ['meta'], queryFn: api.meta })
+  // Before anything is drawn: what this budget's two currencies and countries are called.
+  applyProfile(meta.data?.profile)
+  const pages = PAGES.map(([key, label]): [Page, string] => [key, key === 'sends' ? `${places().home} sends` : label])
   const months = useQuery({ queryKey: ['months'], queryFn: api.months })
 
   const list = months.data ?? []
@@ -116,12 +119,12 @@ function SignedInApp(props: { user: SignedInUser; onSignOut: () => Promise<void>
             onClick={() => setMenuOpen(!menuOpen)}
             className="flex items-center gap-2 rounded-lg bg-brand-800 px-3 py-2 text-sm font-semibold lg:hidden"
           >
-            {menuOpen ? 'Close' : PAGES.find(([key]) => key === page)?.[1]}
+            {menuOpen ? 'Close' : pages.find(([key]) => key === page)?.[1]}
             <span aria-hidden className="text-base leading-none">{menuOpen ? '✕' : '☰'}</span>
           </button>
         </div>
         <nav className={(menuOpen ? 'flex' : 'hidden') + ' max-h-[calc(100dvh-58px)] flex-col gap-1 overflow-y-auto p-3 lg:flex lg:max-h-none'}>
-          {PAGES.map(([key, label]) => (
+          {pages.map(([key, label]) => (
             <NavItem
               key={key}
               label={label}
@@ -290,7 +293,7 @@ function NewMonthDialog(props: { months: MonthSummary[]; onClose: () => void; on
           Copy the plan from the month before
         </label>
         <label className="mt-4 block text-sm">
-          <span className="mb-1 block font-semibold text-slate-700">Rate: 1 NTD in KES (optional)</span>
+          <span className="mb-1 block font-semibold text-slate-700">Rate: 1 {ccy('NTD')} in {ccy('KES')} (optional)</span>
           <input
             aria-label="Exchange rate"
             className={box + ' w-32'}

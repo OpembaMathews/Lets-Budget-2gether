@@ -2,6 +2,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money, monthLabel, otherCurrency } from './api'
+import { ccy } from './api'
+import { TodayRate } from './TodayRate'
 import type { Group, Line, LineActual, LineKind, LineType, Location, Meta, MonthDetail, Priority, Total } from './api'
 import { Button, Card, EditBox, PhoneLabel, Select } from './ui'
 
@@ -165,8 +167,8 @@ function Header(props: { month: MonthDetail; locked: boolean; run: Run }) {
       </div>
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm">
         <label className="flex items-center gap-2">
-          <span className="text-slate-600">1 NTD =</span>
-          <span className="w-16">
+          <span className="text-slate-600">1 {ccy('NTD')} =</span>
+          <span className="w-20">
             <EditBox
               ariaLabel="NTD to KES rate"
               numeric
@@ -176,8 +178,9 @@ function Header(props: { month: MonthDetail; locked: boolean; run: Run }) {
               className="border-slate-300 font-semibold"
             />
           </span>
-          <span className="text-slate-600">KES</span>
+          <span className="text-slate-600">{ccy('KES')}</span>
         </label>
+        {!locked && <TodayRate compact current={month.fx_rate_ntd_kes} onUse={(rate) => void run(() => api.updateMonth(month.id, { fx_rate_ntd_kes: rate }))} />}
       </div>
     </div>
   )
@@ -227,7 +230,7 @@ function Summary(props: { month: MonthDetail; meta: Meta }) {
         <p className="num mt-1 text-lg font-bold text-brand-900">
           {fmt(essential)} <span className="font-normal text-slate-400">·</span>{' '}
           <span className="text-slate-600">{fmt(flexible)}</span>
-          <span className="ml-1 text-xs font-normal text-slate-500">NTD</span>
+          <span className="ml-1 text-xs font-normal text-slate-500">{ccy('NTD')}</span>
         </p>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200" title={`${share.toFixed(0)}% essential`}>
           <div className="h-full bg-brand-600" style={{ width: `${share}%` }} />
@@ -345,7 +348,7 @@ function GroupCard(props: {
               <span className="pl-2">Line</span>
               <span>Type</span>
               <span>Priority</span>
-              <span className="text-right">Budget ({cur})</span>
+              <span className="text-right">Budget ({ccy(cur)})</span>
               <span className="text-right">Actual</span>
               <span className="text-right">Left</span>
               <span />
@@ -616,7 +619,7 @@ function AddLine(props: { group: Group; currency: string; monthId: number; run: 
       <input
         aria-label="New line amount"
         className={box + ' num w-28 text-right'}
-        placeholder={`Amount ${currency}`}
+        placeholder={`Amount ${ccy(currency)}`}
         inputMode="decimal"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}

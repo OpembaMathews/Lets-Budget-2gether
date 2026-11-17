@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money, MONTH_NAMES } from './api'
+import { ccy } from './api'
 import type { Goal, GoalKind, GoalStatus, GoalsView, Importance, Meta, MonthSummary } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
@@ -281,7 +282,7 @@ function GoalDetail(props: {
           <EditBox ariaLabel="Project name" value={g.name} onCommit={(v) => save({ name: v })} className="border-slate-300 bg-white font-medium" />
         </div>
         <div>
-          <span className={label}>Target ({cur})</span>
+          <span className={label}>Target ({ccy(cur)})</span>
           <EditBox ariaLabel="Target" numeric value={String(Number(g.target))} onCommit={(v) => save({ target: v })} className="border-slate-300 bg-white" />
         </div>
         <div>
@@ -401,7 +402,7 @@ function PlanLines(props: { goal: Goal; view: GoalsView; meta: Meta; monthId: nu
           aria-label="Amount for the new line"
           className={box + ' num w-28 text-right'}
           inputMode="decimal"
-          placeholder={section?.currency ?? ''}
+          placeholder={section ? ccy(section.currency) : ''}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
@@ -531,7 +532,7 @@ function Breakdown(props: { goal: Goal; monthId: number; run: Run }) {
                 <option key={c}>{c}</option>
               ))}
             </select>
-            <input aria-label="New item estimate" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={`Estimate ${cur}`} value={estimate} onChange={(e) => setEstimate(e.target.value)} />
+            <input aria-label="New item estimate" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={`Estimate ${ccy(cur)}`} value={estimate} onChange={(e) => setEstimate(e.target.value)} />
             <Button type="submit" variant="ghost" disabled={!name.trim()}>
               Add
             </Button>
@@ -589,7 +590,7 @@ function History(props: { goal: Goal; monthId: number; run: Run }) {
       >
         <span className="text-xs text-slate-500">Add money from outside the plan:</span>
         <input aria-label="Date" type="date" className={box} value={date} onChange={(e) => setDate(e.target.value)} />
-        <input aria-label="Amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={cur} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input aria-label="Amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={ccy(cur)} value={amount} onChange={(e) => setAmount(e.target.value)} />
         <input aria-label="What it was" className={box + ' w-44'} placeholder="e.g. Bonus" value={note} onChange={(e) => setNote(e.target.value)} />
         <Button type="submit" variant="ghost" disabled={!(Number(amount) > 0)}>
           Add
@@ -630,7 +631,7 @@ function NewGoal(props: { monthId: number; meta: Meta; run: Run; onDone: () => v
             ariaLabel="Currency"
             className="w-full py-1.5"
             value={currency}
-            options={meta.currencies.map((c) => ({ value: c.code, label: c.code }))}
+            options={meta.currencies.map((c) => ({ value: c.code, label: ccy(c.code) }))}
             onChange={setCurrency}
           />
         </label>

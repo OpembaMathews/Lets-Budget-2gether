@@ -1,7 +1,7 @@
 // History: every month at a glance, a simple chart, the yearly totals, and two months side by side.
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api, fmt, money } from './api'
+import { api, ccy, fmt, money } from './api'
 import type { HistoryRow } from './api'
 import { Card, PhoneLabel, Select } from './ui'
 
@@ -22,7 +22,7 @@ export default function History(props: { onOpenMonth: (id: number) => void }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-900">History</h1>
-        <p className="mt-1 text-sm text-slate-600">Every month you have planned, and how they compare. Amounts are in NTD, each month at its own rate.</p>
+        <p className="mt-1 text-sm text-slate-600">Every month you have planned, and how they compare. Amounts are in {ccy('NTD')}, each month at its own rate.</p>
       </div>
 
       <Chart months={months} />

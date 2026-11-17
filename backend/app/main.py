@@ -10,6 +10,7 @@ from .auth import router as auth_router
 from .debts import router as debts_router
 from .goals import router as goals_router
 from .income import router as income_router
+from .profile import router as profile_router
 from .review import router as review_router
 from .sends import router as sends_router
 
@@ -25,7 +26,7 @@ app.include_router(auth_router)  # sign-in itself is open
 
 # Every data route needs a signed-in session.
 _signed_in = [Depends(require_login)]
-for data_router in (router, income_router, sends_router, goals_router, debts_router, review_router, admin_router):
+for data_router in (router, income_router, profile_router, sends_router, goals_router, debts_router, review_router, admin_router):
     app.include_router(data_router, dependencies=_signed_in)
 
 

@@ -20,8 +20,9 @@ from .auth import get_db
 from .db import data_dir
 from .income import load_month
 from .models import Account, BalanceCheck, LineGroup, Location, Month, Send
+from .profile import currency_labels, get_profile
 from .sends import sends_view
-from .services import Bucket, convert
+from .services import BASE, QUOTE, Bucket, convert
 from .split import income_view, jsonify
 from .types import to_money
 
@@ -359,12 +360,14 @@ def _plan_rows(db: Session, m: Month, with_month: bool) -> list[list]:
     groups = {g.id: g for g in db.scalars(select(LineGroup))}
     locations = {l.id: l for l in db.scalars(select(Location))}
     actuals = line_actuals(db, m)
+    names = currency_labels(db)
     rows = []
     for line in sorted(m.lines, key=lambda l: (l.sort_order, l.id)):
         g = groups.get(line.group_id)
         a = Decimal(actuals[line.id]["actual"])
         row = [locations[g.location_id].name if g else "", g.name if g else "", line.name, line.currency_code,
                line.priority, line.line_type, line.planned, a, line.planned - a]
+        row[3] = names.get(row[3], row[3])
         rows.append(([label(m)] if with_month else []) + row)
     return rows
 
@@ -391,18 +394,20 @@ def export_month(month_id: int, db: Session = Depends(get_db)):
         parts = {}
         for x in arr.allocations:
             parts[x.kind] = parts.get(x.kind, ZERO) + x.amount
-        payments.append([arr.received_date.isoformat(), arr.source.name, arr.currency_code, arr.amount,
+        payments.append([arr.received_date.isoformat(), arr.source.name,
+                         currency_labels(db).get(arr.currency_code, arr.currency_code), arr.amount,
                          parts.get("essential", ZERO) + parts.get("flexible", ZERO),
                          parts.get("core_saving", ZERO) + parts.get("savings", ZERO), parts.get("project", ZERO),
                          parts.get("free", ZERO)])
     sv = sends_view(db, full)
+    names, home = currency_labels(db), get_profile(db)["home_country"]
     sends = [[s["sent_date"], s["recipient_name"], Decimal(s["amount_kes"]),
               Decimal(s["amount_ntd"]) if s["amount_ntd"] else None, s["platform"],
               "; ".join(f'{p["line_name"]} {p["amount_kes"]}' for p in s["purposes"])] for s in sv["sends"]]
     data = _xlsx([
         ("Plan", PLAN_HEADER, _plan_rows(db, m, False)),
         ("Income", ["Date", "Source", "Currency", "Amount", "Bills", "Saved", "Projects", "Free"], payments),
-        ("Kenya sends", ["Date", "To", "KES", "NTD cost", "Platform", "For"], sends),
+        (f"{home} sends", ["Date", "To", names[QUOTE], f"{names[BASE]} cost", "Platform", "For"], sends),
     ])
     return _download(data, f"budget-{m.year}-{m.month:02d}.xlsx")
 
@@ -414,6 +419,7 @@ def export_year(year: int, db: Session = Depends(get_db)):
     if not months:
         raise HTTPException(404, f"No months in {year}")
     overview, lines = [], []
+    home_code = currency_labels(db)[QUOTE]
     for m in months:
         f = month_figures(db, m)
         overview.append([label(m), m.status, Decimal(f["income"]["KES"]), Decimal(f["budget"]["KES"]),
@@ -421,8 +427,8 @@ def export_year(year: int, db: Session = Depends(get_db)):
                          Decimal(f["free"]["KES"])])
         lines += _plan_rows(db, m, True)
     data = _xlsx([
-        ("Overview", ["Month", "Status", "Income (KES)", "Budget (KES)", "Actual (KES)", "Saved (KES)",
-                      "Sent home (KES)", "Free (KES)"], overview),
+        ("Overview", ["Month", "Status"] + [f"{title} ({home_code})" for title in
+                                        ("Income", "Budget", "Actual", "Saved", "Sent home", "Free")], overview),
         ("All lines", ["Month"] + PLAN_HEADER, lines),
     ])
     return _download(data, f"budget-{year}.xlsx")

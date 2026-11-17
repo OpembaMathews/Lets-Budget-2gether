@@ -3,10 +3,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, fmt, money, monthLabel } from './api'
+import { api, ccy, money, monthLabel, places } from './api'
 import type { Debt, Goal, Group, Line, LineType, Location, Meta, MonthSummary, SourceRow } from './api'
+import { COUNTRIES, currencyOf } from './countries'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
+import { TodayRate } from './TodayRate'
 import { Button, Card, ErrorBanner, Select } from './ui'
 
 const STEP_KEY = 'setup-step'
@@ -52,7 +54,8 @@ export default function Setup(props: {
   const ctx: Ctx = { monthId: month.id, rate: Number(month.fx_rate_ntd_kes) || 1, meta, run }
 
   const steps: Step[] = [
-    { key: 'welcome', title: 'Welcome', body: <Welcome ctx={ctx} month={month} /> },
+    { key: 'welcome', title: 'Welcome', body: <Welcome /> },
+    { key: 'countries', title: 'Where you live and where home is', body: <CountriesStep ctx={ctx} month={month} /> },
     { key: 'income', title: 'Your income', body: <IncomeStep ctx={ctx} /> },
     ...meta.locations.map((loc) => ({
       key: `loc-${loc.id}`,
@@ -243,7 +246,7 @@ function Remove(props: { label: string; onClick: () => void }) {
 }
 
 function currencyOptions(meta: Meta) {
-  return meta.currencies.map((c) => ({ value: c.code, label: c.code }))
+  return meta.currencies.map((c) => ({ value: c.code, label: ccy(c.code) }))
 }
 
 /** An amount moved between NTD and KES. `rate` is KES for one NTD. */
@@ -261,8 +264,7 @@ async function sectionFor(meta: Meta, currency: string, name: string): Promise<G
 
 // ---- 1. welcome ---------------------------------------------------------------
 
-function Welcome(props: { ctx: Ctx; month: MonthSummary }) {
-  const { ctx, month } = props
+function Welcome() {
   const points: [string, string][] = [
     ['Plan the month', 'Give every cost a budget: rent, food, what you send home, what you save.'],
     ['Record each payment', 'When money arrives you type it in, and the app shares it out: bills first, then savings, then your projects. What is left is free to spend.'],
@@ -289,23 +291,80 @@ function Welcome(props: { ctx: Ctx; month: MonthSummary }) {
           </div>
         ))}
       </Card>
-      <Card className="p-4">
-        <h2 className="font-semibold text-brand-900">Your exchange rate for {monthLabel(month)}</h2>
-        <p className="mb-3 text-sm text-slate-600">
-          The app works in NTD and KES. It uses this rate to add the two together. Use the rate you really get when
-          you send money, and update it each month.
-        </p>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-semibold">1 NTD =</span>
-          <Field
-            ariaLabel="KES for one NTD"
-            numeric
-            className="w-24"
-            value={month.fx_rate_ntd_kes}
-            onCommit={(v) => ctx.run(() => api.updateMonth(ctx.monthId, { fx_rate_ntd_kes: v }))}
-          />
-          <span className="font-semibold">KES</span>
+    </div>
+  )
+}
+
+// ---- the two countries and the rate between them ---------------------------------
+
+function CountriesStep(props: { ctx: Ctx; month: MonthSummary }) {
+  const { ctx, month } = props
+  // Shown from here, so two quick choices do not undo each other while the first is still being saved.
+  const [profile, setProfile] = useState(ctx.meta.profile)
+  const saving = useRef<Promise<unknown>>(Promise.resolve())
+  const setRate = (v: string) => ctx.run(() => api.updateMonth(ctx.monthId, { fx_rate_ntd_kes: v }))
+
+  /** Save the country and its currency, then start from today's rate between the two. */
+  function choose(which: 'residence' | 'home', country: string) {
+    const currency = currencyOf(country)
+    if (!currency) return
+    const before = profile
+    const next = { ...profile, [`${which}_country`]: country, [`${which}_currency`]: currency }
+    setProfile(next)
+    // One save at a time, in the order chosen, so the rate that lands last belongs to the last choice.
+    saving.current = saving.current.then(async () => {
+      const ok = await ctx.run(async () => {
+        await api.setProfile(next)
+        try {
+          const today = await api.fxRate()
+          await api.updateMonth(ctx.monthId, { fx_rate_ntd_kes: today.rate })
+        } catch {
+          // the rate is only a suggestion; it can be typed below
+        }
+      })
+      if (!ok) setProfile(before)
+    })
+  }
+
+  const options = (current: string) => {
+    const names = COUNTRIES.map((c) => c.name)
+    return (names.includes(current) ? names : [current, ...names]).map((name) => ({ value: name, label: name }))
+  }
+
+  return (
+    <div className="space-y-4">
+      <Intro>
+        The app keeps two currencies side by side: the one you earn and spend in where you live, and the one used at
+        home. Choose your two countries and it will name everything after them.
+      </Intro>
+      <Card className="grid gap-4 p-4 sm:grid-cols-2">
+        <Labeled label="Where you live and earn">
+          <Select ariaLabel="Country you live in" className="w-full py-2" value={profile.residence_country} onChange={(v) => choose('residence', v)} options={options(profile.residence_country)} />
+          <span className="mt-1 block text-sm normal-case text-slate-600">
+            Currency: <strong>{profile.residence_currency}</strong>
+          </span>
+        </Labeled>
+        <Labeled label="Home, where you send money">
+          <Select ariaLabel="Home country" className="w-full py-2" value={profile.home_country} onChange={(v) => choose('home', v)} options={options(profile.home_country)} />
+          <span className="mt-1 block text-sm normal-case text-slate-600">
+            Currency: <strong>{profile.home_currency}</strong>
+          </span>
+        </Labeled>
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <div>
+          <h2 className="font-semibold text-brand-900">Your exchange rate for {monthLabel(month)}</h2>
+          <p className="text-sm text-slate-600">
+            The app uses this rate to add the two currencies together. Check it at the start of every month.
+          </p>
         </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-semibold">1 {ccy('NTD')} =</span>
+          <Field ariaLabel="Exchange rate" numeric className="w-28" value={month.fx_rate_ntd_kes} onCommit={setRate} />
+          <span className="font-semibold">{ccy('KES')}</span>
+        </div>
+        <TodayRate current={month.fx_rate_ntd_kes} onUse={(rate) => void setRate(rate)} />
       </Card>
     </div>
   )
@@ -380,7 +439,7 @@ function SourceCard(props: { source: SourceRow; ctx: Ctx }) {
         />
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Labeled label={`Expected (${s.currency_code})`}>
+        <Labeled label={`Expected (${ccy(s.currency_code)})`}>
           <Field
             ariaLabel={`Expected from ${s.name}`}
             numeric
@@ -552,7 +611,7 @@ function AddLine(props: { ctx: Ctx; group: Group; currency: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2">
       <input aria-label={`New line in ${group.name}`} className={box + ' min-w-0 flex-1 basis-40'} placeholder={`Add a line to ${group.name}…`} value={name} onChange={(e) => setName(e.target.value)} />
-      <input aria-label={`Budget for the new line in ${group.name}`} className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={`Amount ${currency}`} value={amount} onChange={(e) => setAmount(e.target.value)} />
+      <input aria-label={`Budget for the new line in ${group.name}`} className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={`Amount ${ccy(currency)}`} value={amount} onChange={(e) => setAmount(e.target.value)} />
       <Button variant="ghost" disabled={!name.trim()} onClick={() => void ctx.run(add)}>
         Add
       </Button>
@@ -563,7 +622,7 @@ function AddLine(props: { ctx: Ctx; group: Group; currency: string }) {
 function RecipientsBox(props: { ctx: Ctx; recipients: { id: number; name: string; usual_method: string | null; active: boolean }[] }) {
   const { ctx } = props
   const [name, setName] = useState('')
-  const [method, setMethod] = useState('M-Pesa')
+  const [method, setMethod] = useState(places().home === 'Kenya' ? 'M-Pesa' : 'Mobile money')
   const people = props.recipients.filter((r) => r.active)
   return (
     <Card className="mb-4 p-3">
@@ -581,7 +640,7 @@ function RecipientsBox(props: { ctx: Ctx; recipients: { id: number; name: string
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input aria-label="New recipient" className={box + ' min-w-0 flex-1 basis-40'} placeholder="e.g. Mum" value={name} onChange={(e) => setName(e.target.value)} />
-        <input aria-label="How the new recipient is paid" className={box + ' w-32'} placeholder="M-Pesa" value={method} onChange={(e) => setMethod(e.target.value)} />
+        <input aria-label="How the new recipient is paid" className={box + ' w-32'} placeholder="How they are paid" value={method} onChange={(e) => setMethod(e.target.value)} />
         <Button
           variant="ghost"
           disabled={!name.trim()}
@@ -638,7 +697,7 @@ function SavingsStep(props: { ctx: Ctx }) {
                 ctx.run(() => api.updateLine(core.id, { planned: v, ...(Number(v) < Number(core.planned) ? { reason: 'Changed during set-up' } : {}) }))
               }
             />
-            <span className="font-semibold">{core.currency_code} every month</span>
+            <span className="font-semibold">{ccy(core.currency_code)} every month</span>
             {core.currency_code !== 'NTD' && Number(core.planned) > 0 && (
               <span className="num text-slate-500">≈ {money(Number(core.planned) / ctx.rate, 'NTD')}</span>
             )}
@@ -770,7 +829,7 @@ function GoalsStep(props: { ctx: Ctx }) {
               />
             </div>
             <div className="mt-2 grid grid-cols-3 gap-2">
-              <Labeled label={`Cost (${g.currency_code})`}>
+              <Labeled label={`Cost (${ccy(g.currency_code)})`}>
                 <Field ariaLabel={`Cost of ${g.name}`} numeric value={g.target} onCommit={(v) => ctx.run(() => api.updateGoal(ctx.monthId, g.id, { target: v }))} />
               </Labeled>
               <Labeled label="Saved already">
@@ -873,7 +932,7 @@ function DebtsStep(props: { ctx: Ctx }) {
               />
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <Labeled label={`Still owed (${d.currency_code})`}>
+              <Labeled label={`Still owed (${ccy(d.currency_code)})`}>
                 <Field ariaLabel={`Amount owed to ${d.lender}`} numeric value={d.starting_balance} onCommit={(v) => ctx.run(() => api.updateDebt(ctx.monthId, d.id, { starting_balance: v }))} />
               </Labeled>
               <Labeled label="Repaid each month">
@@ -922,7 +981,7 @@ function AccountsStep(props: { ctx: Ctx }) {
   return (
     <div>
       <Intro>
-        Where is your money held: bank accounts, M-Pesa, a savings account, a chama? At the end of each month you
+        Where is your money held: bank accounts, mobile money, a savings account, a savings group? At the end of each month you
         type the real balance of each one, and the app checks it against what it expected. That is how you catch
         spending that was never recorded.
       </Intro>
@@ -1004,7 +1063,7 @@ function FinishStep(props: { ctx: Ctx }) {
     ['Core saving', core ? money(core.planned, core.currency_code) : 'None'],
     ['Projects and goals', String(openGoals.length)],
     ['Debts', String(openDebts.length)],
-    ['Exchange rate', `1 NTD = ${fmt(ctx.rate)} KES`],
+    ['Exchange rate', `1 ${ccy('NTD')} = ${ctx.rate} ${ccy('KES')}`],
   ]
 
   return (
@@ -1040,7 +1099,7 @@ function FinishStep(props: { ctx: Ctx }) {
         <h2 className="mb-2 font-semibold text-brand-900">What happens next</h2>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
           <li>When money arrives, open <strong>Income</strong> and add the payment. The app shares it out for you.</li>
-          <li>When you send money home, record it on <strong>Kenya sends</strong>.</li>
+          <li>When you send money home, record it on <strong>{places().home} sends</strong>.</li>
           <li>The <strong>Dashboard</strong> shows where the month stands at any moment.</li>
           <li>At the end of the month, open <strong>Review</strong>, type your balances and close the month.</li>
         </ol>

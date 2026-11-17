@@ -198,3 +198,51 @@ def test_budget_from_before_accounts_goes_to_the_owner(real_files):
     newcomer = _signed_up("brian")                                    # gets sample data, not the owner's
     assert newcomer.get("/api/auth/status").json()["user"]["is_admin"] is False
     assert "My real landlord" not in [r["name"] for r in newcomer.get("/api/recipients").json()]
+
+
+def test_countries_and_currencies_can_be_chosen(real_files, monkeypatch):
+    from conftest import REAL_STARTER
+    monkeypatch.setattr("app.seed.STARTER", REAL_STARTER)
+    amina = _signed_up("amina")
+    assert amina.get("/api/meta").json()["profile"] == {
+        "residence_country": "Taiwan", "residence_currency": "NTD", "home_country": "Kenya", "home_currency": "KES"}
+
+    same = {"residence_country": "Uganda", "residence_currency": "UGX", "home_country": "uganda", "home_currency": "UGX"}
+    assert amina.put("/api/settings/profile", json=same).status_code == 422
+    chosen = {"residence_country": "Germany", "residence_currency": "EUR", "home_country": "Uganda", "home_currency": "UGX"}
+    assert amina.put("/api/settings/profile", json=chosen).json() == chosen
+
+    # what was named after the old countries follows; the sums underneath do not change
+    meta = amina.get("/api/meta").json()
+    assert meta["profile"] == chosen
+    assert [l["name"] for l in meta["locations"]] == ["Germany", "Uganda"]
+    assert [a["name"] for a in meta["accounts"]] == ["Germany bank account", "Uganda bank account", "Mobile money"]
+    assert {r["usual_method"] for r in amina.get("/api/recipients").json()} == {"Mobile money", "Bank transfer"}
+
+    # the two can swap, and Kenya gets M-Pesa back
+    back = {"residence_country": "Uganda", "residence_currency": "UGX", "home_country": "Kenya", "home_currency": "KES"}
+    assert amina.put("/api/settings/profile", json=back).status_code == 200
+    meta = amina.get("/api/meta").json()
+    assert [l["name"] for l in meta["locations"]] == ["Uganda", "Kenya"]
+    assert meta["accounts"][2]["name"] == "M-Pesa"
+
+
+def test_todays_rate_is_only_a_suggestion(real_files, monkeypatch):
+    import app.profile as profile
+    amina = _signed_up("amina")
+    asked = []
+
+    def rates(code):
+        asked.append(code)
+        return {"rates": {"KES": 3.944686}, "time_last_update_utc": "Tue, 17 Nov 2026 00:02:31 +0000"}
+
+    monkeypatch.setattr(profile, "_fetch_rates", rates)
+    got = amina.get("/api/fx-rate").json()
+    assert (got["base"], got["quote"], got["rate"]) == ("NTD", "KES", "3.9447")
+    assert asked == ["TWD"]            # the service knows the Taiwan dollar as TWD
+
+    def offline(code):
+        raise OSError("no network")
+
+    monkeypatch.setattr(profile, "_fetch_rates", offline)
+    assert amina.get("/api/fx-rate").status_code == 503

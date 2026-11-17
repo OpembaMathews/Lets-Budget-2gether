@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, fmt, money, MONTH_NAMES } from './api'
+import { ccy } from './api'
 import type { Debt, DebtsView, Meta, MonthSummary } from './api'
 import { useRun } from './hooks'
 import type { Run } from './hooks'
@@ -74,7 +75,7 @@ export default function Debts(props: { month: MonthSummary; meta: Meta; onError:
             }}
           >
             <input aria-label="Lender" className={box + ' min-w-[140px] flex-1'} placeholder="Lender, e.g. Fuliza" value={lender} onChange={(e) => setLender(e.target.value)} />
-            <Select ariaLabel="Currency" value={currency} options={meta.currencies.map((c) => ({ value: c.code, label: c.code }))} onChange={setCurrency} className="py-1.5" />
+            <Select ariaLabel="Currency" value={currency} options={meta.currencies.map((c) => ({ value: c.code, label: ccy(c.code) }))} onChange={setCurrency} className="py-1.5" />
             <input aria-label="Amount owed" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder="Owed now" value={owed} onChange={(e) => setOwed(e.target.value)} />
             <input aria-label="Monthly repayment" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder="Per month" value={monthly} onChange={(e) => setMonthly(e.target.value)} />
             <Button type="submit" disabled={!lender.trim()}>
@@ -212,7 +213,7 @@ function DebtDetail(props: { debt: Debt; view: DebtsView; meta: Meta; monthId: n
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="text-xs text-slate-500">Add a repayment line:</span>
           <Select ariaLabel="Section" value={sectionId} options={sections} onChange={setSectionId} className="py-1.5" />
-          <input aria-label="Repayment amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={section?.currency ?? ''} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input aria-label="Repayment amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={section ? ccy(section.currency) : ''} value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Button
             variant="ghost"
             disabled={!section || !(Number(amount) > 0)}
@@ -299,7 +300,7 @@ function DebtDetail(props: { debt: Debt; view: DebtsView; meta: Meta; monthId: n
             className="py-1.5"
           />
           <input aria-label="Date" type="date" className={box} value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
-          <input aria-label="Amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={cur} value={entryAmount} onChange={(e) => setEntryAmount(e.target.value)} />
+          <input aria-label="Amount" className={box + ' num w-28 text-right'} inputMode="decimal" placeholder={ccy(cur)} value={entryAmount} onChange={(e) => setEntryAmount(e.target.value)} />
           <input aria-label="Note" className={box + ' w-40'} placeholder="Note (optional)" value={entryNote} onChange={(e) => setEntryNote(e.target.value)} />
           <Button type="submit" variant="ghost" disabled={!(Number(entryAmount) > 0)}>
             Add
