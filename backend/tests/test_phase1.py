@@ -5,7 +5,8 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.models import BudgetLine, Currency, LineGroup, Location, Month
-from app.seed import PLAN, seed_if_empty
+from app.seed import seed_if_empty
+from sample import PLAN
 from app.services import Bucket, convert, copy_forward, month_totals, weekly_planned
 
 D = Decimal

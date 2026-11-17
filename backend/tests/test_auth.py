@@ -1,5 +1,6 @@
 """Sign-in: accounts, sessions in an HttpOnly cookie, every data route protected, each account its own data."""
 import sqlite3
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
@@ -117,6 +118,31 @@ def test_each_account_has_its_own_sample_data(real_files):
     assert "Amina's landlord" in [r["name"] for r in amina.get("/api/recipients").json()]
     assert brian.get("/api/recipients").json() == before
     assert len(list(real_files.glob("user-*.db"))) == 2
+
+
+def test_a_new_account_starts_clean(real_files, monkeypatch):
+    from conftest import REAL_STARTER
+    monkeypatch.setattr("app.seed.STARTER", REAL_STARTER)
+    amina = _signed_up("amina")
+
+    # a short plan with nothing budgeted yet, and one core saving line to fill in
+    month_id = amina.get("/api/months").json()[0]["id"]
+    month = amina.get(f"/api/months/{month_id}").json()
+    assert 0 < len(month["lines"]) < 15
+    assert all(Decimal(l["planned"]) == 0 for l in month["lines"])
+    assert [l["name"] for l in month["lines"] if l["is_core"]] == ["Core saving"]
+
+    # no projects, no debts, and nothing expected from the income sources
+    assert amina.get("/api/goals").json()["goals"] == []
+    assert amina.get("/api/debts").json()["debts"] == []
+    income = amina.get(f"/api/months/{month_id}/income").json()
+    assert len(income["sources"]) == 2 and income["arrivals"] == []
+    assert Decimal(income["summary"]["arrived"]["NTD"]) == 0
+
+    # every screen opens on the empty plan
+    for path in ("income", "sends", "review"):
+        assert amina.get(f"/api/months/{month_id}/{path}").status_code == 200, path
+    assert amina.get("/api/history").status_code == 200
 
 
 def test_only_the_owner_manages_accounts(real_files):

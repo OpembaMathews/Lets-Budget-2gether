@@ -657,7 +657,7 @@ function GroupCard(props: {
               ) : Number(l.over) > 0 ? (
                 <span className="text-amber-800">+{fmt(l.over)} over</span>
               ) : finished ? (
-                <span className="text-brand-600">Sent ✓</span>
+                Number(l.sent) > 0 ? <span className="text-brand-600">Sent ✓</span> : <span className="text-slate-400">–</span>
               ) : ready > 0 ? (
                 <span className="text-brand-900">{fmt(ready)}</span>
               ) : (

@@ -1,8 +1,8 @@
 """Accounts: who can sign in, and which database file holds each person's budget.
 
 - data/accounts.db holds the accounts and their sign-in sessions, nothing else.
-- Every account has its own budget database, filled with the sample starting
-  data when the account is created.
+- Every account has its own budget database, given the clean starting plan
+  when the account is created.
 - The first account is the owner (super admin). It keeps the database from
   before accounts existed, if there is one.
 """
@@ -74,7 +74,7 @@ def user_db_path(user: User) -> Path:
 
 
 def prepare_budget_db(path: Path) -> None:
-    """Create or upgrade one budget database. A new one gets the sample starting data."""
+    """Create or upgrade one budget database. A new one gets the clean starting plan."""
     migrate(engine_for(path))
     with open_session(path) as db:
         seed_if_empty(db)

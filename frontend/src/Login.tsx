@@ -63,7 +63,7 @@ export default function Login(props: { setUp: boolean; minLength: number; onSign
         <h1 className="text-xl font-bold text-brand-900">{creating ? 'Create your account' : 'Sign in'}</h1>
         <p className="mt-1 text-sm text-slate-600">
           {creating
-            ? 'You get your own budget, filled with sample figures you can change to yours.'
+            ? 'You get your own budget, starting from a short empty plan you fill in.'
             : 'Enter your username and password to open your budget.'}
         </p>
 

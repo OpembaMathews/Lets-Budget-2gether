@@ -563,6 +563,8 @@ function LeftCell(props: { actual: LineActual | undefined }) {
   const left = Number(a.left)
   const cell = 'num block py-1 pr-2 text-right md:py-0 '
   if (a.over) return <span className={cell + 'font-semibold text-red-700'}>Over {fmt(-left)}</span>
+  // No budget and nothing given yet: there is nothing to be done with.
+  if (left === 0 && Number(a.actual) === 0) return <span className={cell + 'text-slate-400'}>–</span>
   if (left === 0) return <span className={cell + 'font-semibold text-brand-600'}>Done ✓</span>
   return <span className={cell + 'text-slate-600'}>{fmt(left)}</span>
 }

@@ -92,6 +92,7 @@ export default function Goals(props: { month: MonthSummary; meta: Meta; onError:
         </Card>
         <Card className="p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Funded so far</p>
+          {Object.keys(view.totals).length === 0 && <p className="num mt-1 text-lg font-bold text-brand-900">Nothing yet</p>}
           {Object.entries(view.totals).map(([code, t]) => (
             <p key={code} className="num mt-1 text-lg font-bold text-brand-900">
               {fmt(t.funded)} <span className="text-sm font-normal text-slate-500">of {money(t.target, code)}</span>

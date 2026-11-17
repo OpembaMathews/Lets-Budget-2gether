@@ -99,7 +99,9 @@ export default function Dashboard(props: {
           {!nothing(s.savings_reserved) && (
             <p className="num text-sm text-brand-100">≈ {money(s.savings_reserved.KES, 'KES')}</p>
           )}
-          {s.core ? (
+          {s.core && Number(s.core.planned) === 0 ? (
+            <p className="mt-1 text-sm text-brand-100">Set your core saving amount on the Month plan</p>
+          ) : s.core ? (
             <p className="mt-1 text-sm text-brand-100">
               Core saving {money(s.core.planned, s.core.currency_code)}:{' '}
               <strong className={coreDone ? 'text-leaf' : 'text-amber-300'}>{coreDone ? 'taken ✓' : 'not yet taken'}</strong>

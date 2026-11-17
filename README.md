@@ -13,7 +13,7 @@ Plan once a month, record each payment when it arrives, and the app shares it ou
 - **Debts:** loans and overdrafts with repayment lines that are paid as bills, and a clearing date.
 - **Month-end review:** what went over budget, cash not yet sent, a check of your real account balances, then close the month to lock it (a backup copy of the database is saved first).
 - **History:** every month side by side, yearly totals, a simple chart, and Excel downloads.
-- **Accounts:** anyone can create an account with a username and password, and gets their own budget filled with sample figures to change. Nobody can see anyone else's budget. Passwords are stored only as salted hashes, and every data request needs a signed-in session. The first account is the owner, who can give someone a new password or remove an account.
+- **Accounts:** anyone can create an account with a username and password, and gets their own budget, starting from a short empty plan to fill in. Nobody can see anyone else's budget. Passwords are stored only as salted hashes, and every data request needs a signed-in session. The first account is the owner, who can give someone a new password or remove an account.
 
 ## Built with
 
@@ -45,7 +45,7 @@ npm run dev
 
 Open http://localhost:5173. The first time, the app asks you to create an account. The first account is the owner.
 
-Every new account gets its own database, filled with **made-up sample data** so you can see how things work. Rename or delete anything you like. A database that already holds data is never overwritten.
+Every new account gets its own database, starting clean: a short plan of common lines with **no amounts**, two income sources and no projects. Rename, add or delete anything you like. A database that already holds data is never overwritten.
 
 If you used the app before accounts existed, your budget and password are kept: sign in with the username `admin` and the password you already use.
 

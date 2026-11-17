@@ -17,9 +17,18 @@ import app.auth as auth
 from app.accounts import AccountsBase, User, get_accounts_db
 from app.db import Base, enable_foreign_keys, forget_all_engines
 from app.main import app
+import app.seed as seed
 from app.seed import seed_if_empty
+from sample import SAMPLE
 
 USERNAME, PASSWORD = "tester", "test-password"
+# What a new account really starts from. The tests swap it for the fuller sample budget.
+REAL_STARTER = seed.STARTER
+
+
+@pytest.fixture(autouse=True)
+def sample_budget(monkeypatch):
+    monkeypatch.setattr(seed, "STARTER", SAMPLE)
 
 
 def _memory_factory(base):

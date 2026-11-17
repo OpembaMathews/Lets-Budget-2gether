@@ -128,7 +128,7 @@ function ReceivedSoFar(props: { view: IncomeView }) {
         </p>
         <p className="num text-sm text-slate-500">
           ≈ {money(s.savings_reserved.KES, 'KES')}
-          {s.core ? (Number(s.core.covered) >= Number(s.core.planned) ? ' · core saving taken' : ' · core saving not yet taken') : ''}
+          {s.core && Number(s.core.planned) > 0 ? (Number(s.core.covered) >= Number(s.core.planned) ? ' · core saving taken' : ' · core saving not yet taken') : ''}
         </p>
       </Card>
       <Card className="p-4">
