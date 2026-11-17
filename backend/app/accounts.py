@@ -96,12 +96,21 @@ def create_user(adb: Session, username: str, password_hash: str) -> User:
     return user
 
 
-def remove_user(adb: Session, user: User) -> str:
-    """Delete an account. Its budget file is moved to data/removed, not destroyed."""
+def remove_user(adb: Session, user: User, erase: bool = False) -> str:
+    """Delete an account. Its budget file is moved to data/removed, not destroyed.
+
+    With `erase`, for someone deleting their own account, the budget file and
+    its backup copies are deleted for good instead. Raises OSError, with the
+    account left as it was, if the file cannot be deleted right now.
+    """
     path = user_db_path(user)
     kept_as = ""
     forget_engine(path)
-    if path.exists():
+    if erase:
+        copies = list((data_dir() / "backups").glob(f"{path.stem}-*.db"))
+        for file in [path, Path(f"{path}-wal"), Path(f"{path}-shm"), Path(f"{path}-journal"), *copies]:
+            file.unlink(missing_ok=True)
+    elif path.exists():
         folder = data_dir() / "removed"
         folder.mkdir(exist_ok=True)
         target = folder / f"{datetime.now():%Y%m%d-%H%M%S}-{user.username}-{user.db_file}"

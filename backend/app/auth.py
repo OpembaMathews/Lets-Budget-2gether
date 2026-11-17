@@ -140,6 +140,10 @@ class ChangeIn(BaseModel):
     new: str = Field(min_length=MIN_LENGTH, max_length=200)
 
 
+class DeleteMeIn(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+
+
 class NewPasswordIn(BaseModel):
     new: str = Field(min_length=MIN_LENGTH, max_length=200)
 
@@ -220,6 +224,26 @@ def change_password(body: ChangeIn, request: Request, response: Response, adb: S
     adb.flush()
     _start_session(adb, response, user, remember=True)
     return {"signed_in": True}
+
+
+@router.post("/delete-account")
+def delete_my_account(body: DeleteMeIn, request: Request, response: Response, adb: Session = Depends(get_accounts_db)):
+    """Delete the signed-in person's own account and budget, for good. They type their password to confirm."""
+    user = current_user(request, adb)
+    if user is None:
+        raise HTTPException(401, "Please sign in")
+    if user.is_admin:
+        raise HTTPException(409, "The owner's account cannot be deleted, because the app needs an owner")
+    if not check_password(body.password, user.password_hash):
+        raise HTTPException(401, "That password is not right")
+    try:
+        remove_user(adb, user, erase=True)
+    except OSError:  # the file is in use this very moment
+        adb.rollback()
+        raise HTTPException(503, "Your account could not be deleted just now. Try again in a moment.")
+    _fails.pop(user.username, None)
+    response.delete_cookie(COOKIE, path="/")
+    return {"signed_in": False}
 
 
 # ---- the owner's view of the accounts ---------------------------------------------

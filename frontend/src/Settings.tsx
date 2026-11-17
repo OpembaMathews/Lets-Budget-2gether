@@ -141,6 +141,8 @@ export default function Settings(props: { meta: Meta; user: SignedInUser; onErro
           Open the set-up guide
         </Button>
       </Card>
+
+      {!props.user.is_admin && <DeleteAccountCard username={props.user.username} />}
     </div>
   )
 }
@@ -617,6 +619,44 @@ function PeopleCard(props: { me: SignedInUser }) {
         ))}
       </ul>
       {message && <p className={'mt-2 text-sm ' + (message.ok ? 'text-brand-700' : 'text-red-700')}>{message.text}</p>}
+    </Card>
+  )
+}
+
+function DeleteAccountCard(props: { username: string }) {
+  const [password, setPassword] = useState('')
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  return (
+    <Card className="border-red-200 p-5">
+      <h2 className="text-lg font-bold text-red-800">Delete my account</h2>
+      <p className="mb-3 text-sm text-slate-600">
+        This deletes your account <strong>{props.username}</strong> and everything in it: every month, payment, send,
+        project and debt, and the backup copies. It cannot be undone. Download your months as Excel first if you want
+        to keep a record.
+      </p>
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!password || busy) return
+          if (!window.confirm(`Delete the account ${props.username} and all its data for good?`)) return
+          setBusy(true)
+          api
+            .deleteMyAccount(password)
+            .then(() => window.location.reload()) // back to the sign-in screen, with nothing of the old account left in memory
+            .catch((err: Error) => {
+              setProblem(err.message)
+              setBusy(false)
+            })
+        }}
+      >
+        <input aria-label="Your password, to confirm" type="password" autoComplete="current-password" className={box + ' w-full sm:w-56'} placeholder="Your password, to confirm" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Button type="submit" variant="danger" disabled={!password || busy}>
+          {busy ? 'Deleting…' : 'Delete my account'}
+        </Button>
+      </form>
+      {problem && <p className="mt-2 text-sm text-red-700">{problem}</p>}
     </Card>
   )
 }

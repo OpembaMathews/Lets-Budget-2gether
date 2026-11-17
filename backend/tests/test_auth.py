@@ -246,3 +246,26 @@ def test_todays_rate_is_only_a_suggestion(real_files, monkeypatch):
 
     monkeypatch.setattr(profile, "_fetch_rates", offline)
     assert amina.get("/api/fx-rate").status_code == 503
+
+
+def test_someone_can_delete_their_own_account(real_files):
+    amina, brian = _signed_up("amina"), _signed_up("brian")
+    assert len(list(real_files.glob("user-*.db"))) == 2
+    month_id = brian.get("/api/months").json()[0]["id"]
+    assert brian.post(f"/api/months/{month_id}/close", json={}).status_code == 200   # leaves a backup copy behind
+    assert len(list((real_files / "backups").glob("*.db"))) == 1
+
+    # the password is asked for again, and the owner cannot delete the account the app depends on
+    assert brian.post("/api/auth/delete-account", json={"password": "wrong"}).status_code == 401
+    assert amina.post("/api/auth/delete-account", json={"password": "a-password"}).status_code == 409
+    assert TestClient(app).post("/api/auth/delete-account", json={"password": "a-password"}).status_code == 401
+
+    assert brian.post("/api/auth/delete-account", json={"password": "a-password"}).json() == {"signed_in": False}
+    assert brian.get("/api/months").status_code == 401                      # signed out
+    assert TestClient(app).post("/api/auth/login", json={"username": "brian", "password": "a-password"}).status_code == 401
+    assert len(list(real_files.glob("user-*.db"))) == 1                     # the budget is gone, not set aside
+    assert not (real_files / "removed").exists()
+    assert list((real_files / "backups").glob("*.db")) == []
+    assert [a["username"] for a in amina.get("/api/admin/accounts").json()] == ["amina"]
+    assert amina.get("/api/months").status_code == 200                      # nobody else is touched
+    _signed_up("brian")                                                     # the name is free again

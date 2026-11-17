@@ -653,6 +653,9 @@ export const api = {
   changePassword: (current: string, next: string) =>
     request<{ signed_in: boolean }>('POST', '/auth/change-password', { current, new: next }),
 
+  /** Deletes the signed-in person's own account and budget for good. */
+  deleteMyAccount: (password: string) => request<{ signed_in: boolean }>('POST', '/auth/delete-account', { password }),
+
   // the owner only
   appAccounts: () => request<AppAccount[]>('GET', '/admin/accounts'),
   setAccountPassword: (id: number, next: string) => request<{ ok: boolean }>('POST', `/admin/accounts/${id}/password`, { new: next }),
